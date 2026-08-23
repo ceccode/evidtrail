@@ -39,7 +39,7 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "simple-git": "^3.20.0",
+    "simple-git": "^3.36.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

@@ -47,6 +47,19 @@ afterAll(() => {
 });
 
 describe('collectCommits', () => {
+  it('rejects option-shaped refs before they can alter a Git invocation', async () => {
+    // A CLI flag or CI environment variable is untrusted input. Treating an
+    // option-shaped ref as data prevents it from becoming a Git option — a
+    // defense-in-depth boundary even though normal collection never clones or
+    // fetches remotes.
+    await expect(
+      collectCommits({ repoPath, defaultBranch: '--config=protocol.ext.allow=always' })
+    ).rejects.toThrow("Invalid default branch: Git refs must not start with '-'");
+    await expect(collectCommits({ repoPath, diffBase: '--upload-pack=sh' })).rejects.toThrow(
+      "Invalid diff base: Git refs must not start with '-'"
+    );
+  });
+
   it('collects real author and committer identities and dates', async () => {
     const stream = await collectCommits({ repoPath });
     expect(stream.commits).toHaveLength(2);

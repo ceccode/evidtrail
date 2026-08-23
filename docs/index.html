@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIDA - AI Development Accounting</title>
-    <meta name="description" content="Track and measure AI-assisted development in your repositories. Open-source framework for quantifying AI coding impact.">
+    <meta name="description" content="An auditable evidence ledger for AI-assisted software development: provenance, scope, and repository change signals with visible limits.">
     
     <!-- Open Graph -->
     <meta property="og:title" content="AIDA - AI Development Accounting">
-    <meta property="og:description" content="Track and measure AI-assisted development in your repositories">
+    <meta property="og:description" content="Auditable evidence, scope, and repository change signals for AI-assisted development">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://ceccode.github.io/aida-metrics">
     
@@ -43,7 +43,7 @@
         <section class="hero">
             <div class="container">
                 <h1 class="hero-title">
-                    Track and measure<br>
+                    Record evidence for<br>
                     <span class="gradient-text">AI-assisted development</span>
                 </h1>
                 <p class="hero-subtitle">
@@ -78,31 +78,25 @@
                             <span class="prompt">$</span> aida collect --since 30d
                         </div>
                         <div class="terminal-line output">
-                            ✓ Collected 247 commits from last 30 days
+                            ✓ Collected 247 commits
                         </div>
                         <div class="terminal-line output">
-                            ✓ Autonomy: agent 71 · assisted 18 · no evidence 158
+                            ✓ Attribution: ai 71 · human 0 · automated 0 · unknown 176
                         </div>
                         <div class="terminal-line">
                             <span class="prompt">$</span> aida analyze
                         </div>
                         <div class="terminal-line output">
-                            ✓ Rapid retouch: 18.2% (30d, 44 eligible, 6 too recent)
+                            ✓ Attribution coverage: 28.7% — cohort overlays are low-confidence
                         </div>
                         <div class="terminal-line output">
-                            ✓ Trend 2026-05 → 2026-06: 24.1% → 18.2% (−5.9pt)
+                            ✓ Repo rapid retouch (30d): 18.2% (8/44 eligible)
                         </div>
                         <div class="terminal-line">
                             <span class="prompt">$</span> aida report
                         </div>
                         <div class="terminal-line output">
                             ✓ Reports generated in ./aida-output/
-                        </div>
-                        <div class="terminal-line">
-                            <span class="prompt">$</span> aida comment
-                        </div>
-                        <div class="terminal-line output">
-                            ✓ AIDA report posted to PR #42
                         </div>
                     </div>
                 </div>
@@ -130,18 +124,18 @@
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">🎯</div>
-                        <h3>Evidence, free of charge</h3>
-                        <p>A commit hook stamps the autonomy mode automatically when it detects an agent session; tool trailers do the rest. Provenance that needs no per-commit discipline, because per-commit discipline never survives contact with a real team.</p>
+                        <h3>Declared provenance</h3>
+                        <p>The commit hook stamps a mode when <code>AIDA_MODE</code>, a supported agent environment, or a team-configured default determines it. When AIDA cannot know, it writes nothing — <code>unknown</code> remains honest.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">💬</div>
                         <h3>PR Comments</h3>
-                        <p>Post AIDA reports directly on pull requests. Auto-detects GitHub Actions with GitLab and Bitbucket coming soon.</p>
+                        <p>Post AIDA reports directly on pull requests and merge requests. GitHub Actions and GitLab CI are supported; comments are explicit network operations that require a token.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">🚀</div>
                         <h3>CI/CD Ready</h3>
-                        <p>One workflow file, zero configuration. Runs on every PR and updates the comment automatically.</p>
+                        <p>Use the documented workflow with full Git history and scoped token permissions. It runs on every PR and updates its own comment automatically.</p>
                     </div>
                 </div>
             </div>
@@ -179,7 +173,7 @@
         <section class="supported-tools">
             <div class="container">
                 <h2>Supported AI Tools</h2>
-                <p class="section-subtitle">AIDA classifies commits into explicit, implicit, and mention levels via commit messages, git trailers, and Co-Authored-By attribution.</p>
+                <p class="section-subtitle">Known tool and trailer signals can establish AI involvement. They do not, by themselves, prove an autonomy mode; absent evidence remains visible as unknown.</p>
                 <div class="tools-grid">
                     <div class="tool-badge">Claude Code</div>
                     <div class="tool-badge">GitHub Copilot</div>
@@ -196,7 +190,7 @@
         <section id="ci" class="ci-integration">
             <div class="container">
                 <h2>CI/CD Integration</h2>
-                <p class="section-subtitle">Add one workflow file to your repo and get AI metrics on every pull request.</p>
+                <p class="section-subtitle">Add the documented workflow to create a scoped report on every pull request. PR comments require explicit token permissions.</p>
                 <div class="ci-example">
                     <div class="terminal">
                         <div class="terminal-header">
@@ -210,12 +204,15 @@
                         <div class="terminal-body">
                             <div class="terminal-line"><span class="yaml-key">name:</span> AIDA Analysis</div>
                             <div class="terminal-line"><span class="yaml-key">on:</span> [pull_request]</div>
+                            <div class="terminal-line"><span class="yaml-key">permissions:</span></div>
+                            <div class="terminal-line">&nbsp; <span class="yaml-key">contents:</span> read</div>
+                            <div class="terminal-line">&nbsp; <span class="yaml-key">pull-requests:</span> write</div>
                             <div class="terminal-line">&nbsp;</div>
                             <div class="terminal-line"><span class="yaml-key">jobs:</span></div>
                             <div class="terminal-line">&nbsp; <span class="yaml-key">aida:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; <span class="yaml-key">runs-on:</span> ubuntu-latest</div>
                             <div class="terminal-line">&nbsp; &nbsp; <span class="yaml-key">steps:</span></div>
-                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> actions/checkout@v4</div>
+                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> actions/checkout@v5</div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">with:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">fetch-depth:</span> 0</div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">run:</span> npm i -g @aida-dev/cli</div>
@@ -230,8 +227,8 @@
 
         <section class="cta">
             <div class="container">
-                <h2>Ready to measure AI impact?</h2>
-                <p>Join developers who are quantifying their AI-assisted development workflow.</p>
+                <h2>Ready to make AI evidence auditable?</h2>
+                <p>Start with the repository signals Git can support — and keep their limits visible.</p>
                 <div class="cta-actions">
                     <a href="https://github.com/ceccode/aida-metrics" class="btn btn-primary">
                         Get Started

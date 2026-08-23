@@ -5,8 +5,7 @@ Command-line interface for AIDA — an auditable evidence ledger for AI-assisted
 ## Installation
 
 ```bash
-pnpm install
-pnpm build
+npm install -g @aida-dev/cli
 ```
 
 ## Usage
@@ -22,6 +21,14 @@ aida analyze
 
 # Generate the Markdown report
 aida report
+```
+
+This workflow stays local. It records repository change signals plus declared, inferred, and missing provenance; it does not infer productivity, defects, causality, or developer performance.
+
+To declare provenance for future commits, install the hook. Set `AIDA_MODE` or configure a truthful `defaultMode` in `.aida.json`; when no mode can be determined, AIDA writes no trailer and preserves `unknown`.
+
+```bash
+aida install-hooks
 ```
 
 ### Commands
@@ -58,3 +65,5 @@ Options:
 - `commit-stream.json` - Normalized commit data with AI tagging
 - `metrics.json` - Scoped attribution, rapid-retouch, trend, and outcome metrics
 - `report.md` - Human-readable Markdown report
+
+Run `aida --help` for the complete command reference. The repository [README](../../README.md) documents metric contracts, optional GitHub PR outcomes, and GitHub Actions/GitLab CI comments.

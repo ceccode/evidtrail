@@ -37,7 +37,7 @@ export function createCommentCommand(): Command {
         const provider = detectProvider();
         if (!provider) {
           logger.error(
-            'Could not detect CI provider. Supported: GitHub Actions.\n' +
+            'Could not detect CI provider. Supported: GitHub Actions and GitLab CI.\n' +
               'Use --dry-run to print the report to stdout instead.'
           );
           process.exit(1);

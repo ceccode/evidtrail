@@ -27,7 +27,7 @@
 
 ## Why AIDA?
 
-AI coding assistants are increasingly part of development workflows, but Git evidence is partial and easy to over-interpret. AIDA turns that evidence into bounded, auditable observations.
+AI coding assistants are increasingly part of development workflows, but Git evidence is partial and easy to over-interpret. AIDA is for teams that need a bounded, auditable record of what their repository can actually establish — not a productivity score for people or models.
 
 Here, **accounting means keeping a traceable ledger of evidence, scope, assumptions, and outcomes**. It does not mean that repository history alone can establish financial value. The ledger is the foundation on which later, explicitly modelled cost estimates can be built.
 
@@ -40,15 +40,15 @@ AIDA does **not** infer productivity, defects, deployment, causality, capitaliza
 
 ## Features
 
-- **4-Level AI Detection** — Classifies commits as explicit, implicit, mention, or none across Claude Code, Copilot, ChatGPT, Cursor, Windsurf/Devin, Gemini, Codeium
-- **Configurable Tools** — Add custom AI tools via `.aida.json` or CLI flags
+- **Provenance, not guesses** — Declared, inferred, and missing evidence remain distinct; `unknown` is never silently called human
+- **Autonomy when stated** — `none` / `autocomplete` / `assisted` / `agent` describes the declared level of participation, separately from how AIDA knows
+- **Configurable tool signals** — Add custom AI tools via `.aida.json` or CLI flags; a tool signal proves involvement, not a precise autonomy mode
 - **Bounded Change Signals** — Fixed-horizon rapid-retouch rates with eligible and too-recent counts
-- **Autonomy** — Two orthogonal axes: *involvement* (`none`/`autocomplete`/`assisted`/`agent`) and *evidence* (`declared`/`inferred`/`none`)
 - **Explicit Scope** — Default-branch ancestry by default; all refs and PR ranges are opt-in and labelled
-- **Comparative Baseline** — AI vs non-AI side-by-side with delta, so metrics are interpretable
+- **Evidence-gated cohorts** — Autonomy and baseline overlays appear only when real evidence supports an honest comparison
 - **Fast & Deterministic** — A metrics artifact is reproducible from the same collected snapshot; schemas reject incompatible inputs
-- **CLI-First** — Simple commands for collection, analysis, and reporting
-- **CI/CD Ready** — GitHub Actions integration out of the box
+- **Local by default** — Collection, analysis, blame, and reporting stay local; PR outcomes and comments are explicit network operations
+- **CI comments** — GitHub Actions and GitLab CI can post a report with an explicit token and scoped permissions
 
 ## Installation
 
@@ -109,6 +109,12 @@ aida analyze
 
 # Generate reports
 aida report
+```
+
+The first report is historical and may honestly contain `unknown`. To declare provenance for future commits, install the hook and configure a truthful mode through `AIDA_MODE` or the repository's `.aida.json`; when AIDA cannot determine a mode, it writes no trailer.
+
+```bash
+aida install-hooks
 ```
 
 ### Using from Source
@@ -206,7 +212,7 @@ aida report --out-dir ./aida-output
 - `--pr` - PR-scoped analysis (auto-detect base ref from CI env vars)
 - `--diff-base <ref>` - Explicit base ref for PR-scoped analysis (e.g., `origin/main`)
 - `--ai-pattern <pattern>` - Custom AI detection regex (repeatable)
-- `--ai-tool <name>` - Additional AI tool name (repeatable, benefits from 4-level classification)
+- `--ai-tool <name>` - Additional AI tool name (repeatable; contributes inferred involvement evidence)
 - `--ai-trailer-domain <domain>` - Additional Co-authored-by domain (repeatable)
 - `--ai-bot-blocklist <name>` - Non-AI bot to exclude from trailer matching (repeatable)
 - `--default-branch <name>` - Default branch name (auto-detect if omitted)
@@ -490,7 +496,7 @@ This is the successor to the removed git-only merge ratio. The forge preserves c
 
 Two deliberate properties:
 
-- **Opt-in and additive.** Collection, analysis, blame, and report generation stay local. `aida fetch-prs` and `aida comment` are the explicit network commands. Without a token the PR metric is absent, with a caveat saying so.
+- **Opt-in and additive.** Collection, analysis, blame, and report generation stay local. `aida fetch-prs` and `aida comment` are the explicit network commands. `aida fetch-prs` currently reads GitHub PR outcomes; `aida comment` supports GitHub Actions and GitLab CI. Without a token the PR metric is absent, with a caveat saying so.
 - **No author identity is ever fetched or stored.** `pr-stream.json` holds PR numbers, outcomes, dates, and the attribution of the PR's own commits — nothing that names anyone ([#35](https://github.com/ceccode/AIDA-Metrics/issues/35)).
 
 PRs are attributed from **their own commit messages as returned by the API**, not from a join against local git. That is what makes this work for squash-merged PRs whose branches no longer exist — the exact case where git-based measurement failed.
@@ -617,6 +623,8 @@ The v3 contract binds artifacts to a labelled commit scope and head snapshot, ma
 ## CI/CD Integration
 
 ### GitHub Actions (with PR comments)
+
+The job that posts comments needs `contents: read` and `pull-requests: write`; organizations that default `GITHUB_TOKEN` to read-only must declare these permissions explicitly.
 
 ```yaml
 - uses: actions/checkout@v5
@@ -826,8 +834,8 @@ Feel free to open an **Issue** or start a **Discussion**.
 
 ## Call to Action
 
-The future of software development is hybrid – humans and AI agents working together.  
-To account for it properly, we need better metrics.  
+AI participation in software work is becoming ambient.
+To account for it properly, we need evidence with visible limits.
 
 **Join us in building AIDA.**
 

@@ -42,6 +42,17 @@ function isSyntheticPRMerge(commit: { parents: string[]; message: string }): boo
 // generates: the only reliable link back to what was reverted (#26).
 const REVERT_TARGET = /This reverts commit ([0-9a-f]{7,40})/i;
 
+// Refs supplied on the command line or by CI environment variables become
+// arguments to Git. They are data, never options: accepting a leading dash
+// would let an untrusted value alter Git's invocation. This is deliberately
+// narrower than full ref validation because Git still resolves normal branch
+// names and object IDs; AIDA only needs to reject option-shaped input.
+function assertSafeRefArgument(value: string | undefined, name: string): void {
+  if (value?.startsWith('-') || value?.includes('\0')) {
+    throw new Error(`Invalid ${name}: Git refs must not start with '-' or contain NUL bytes.`);
+  }
+}
+
 export async function isEmptyRepository(git: SimpleGit): Promise<boolean> {
   try {
     return (await git.raw(['rev-list', '--count', '--all'])).trim() === '0';
@@ -141,6 +152,11 @@ export async function collectCommits(options: CollectOptions): Promise<CommitStr
     redactAuthors = false,
     logger,
   } = options;
+
+  // These can originate outside the repository: explicit CLI flags and CI
+  // base-ref detection. Validate before any Git command receives them.
+  assertSafeRefArgument(providedDefaultBranch, 'default branch');
+  assertSafeRefArgument(diffBase, 'diff base');
 
   const git = simpleGit(repoPath);
 
