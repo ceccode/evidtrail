@@ -1,5 +1,15 @@
 # @aida/cli
 
+## 1.0.2
+
+### Patch Changes
+
+- 4dc9ed7: Align the published CLI README and public documentation with the 1.0 evidence contract: truthful provenance behavior, evidence-gated cohort comparisons, local-by-default processing, and GitHub/GitLab comment support.
+- 61deeac: Correct the root README to state that PR acceptance is already available through `aida fetch-prs`, rather than describing it as planned work.
+- Updated dependencies [4dc9ed7]
+  - @aida-dev/core@1.0.1
+  - @aida-dev/metrics@1.0.2
+
 ## 1.0.1
 
 ### Patch Changes
