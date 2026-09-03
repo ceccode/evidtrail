@@ -1,5 +1,47 @@
 # @aida/cli
 
+## 1.1.0
+
+### Minor Changes
+
+- 3b5d6b2: `aida init`, `aida doctor`, and `aida` with no arguments — the first ten minutes, fixed
+
+  Adoption dies in the first ten minutes. Before this, a team had to write `.aida.json` by hand, remember `install-hooks` in every clone, copy a 99-line workflow, and learn that `collect → analyze → report` is a pipeline before seeing a single number. Each step was small; together they were the reason a tool gets evaluated on a laptop and never reaches CI.
+  - **`aida init`** — the whole setup in one command: a starter `.aida.json` (no prior unless `--default-mode` is passed; an assumption is opted into, not defaulted), the commit hook for this clone, `"prepare": "aida install-hooks --if-git"` for every other clone, and `.github/workflows/aida.yml` — npm-based, `fetch-depth: 0`, `--redact-authors`, minimal permissions, comment upserted by `gh` in its own step so the write token never meets PR-built code. **Never overwrites**: a file or script that exists is reported and left alone, so re-running is free and a hand-tuned setup is never clobbered.
+  - **`aida doctor`** — every way a run can be quietly wrong, asked before the run: shallow clone (blocking — the classic confidently-wrong CI report), partial clone, missing `origin/HEAD`, invalid or retired-key `.aida.json` (blocking, same fail-fast as `analyze`), hook missing in _this_ clone, no `prepare` script, no CI workflow. Each non-green line carries its one-line fix. Exit code is non-zero only for blockers, so it is safe inside `prepare`. `--json` for scripts.
+  - **`aida`** with no subcommand runs `collect → analyze → report`. The granular commands stay for CI and for anyone who wants one stage at a time.
+
+  Hook installation moved from the command body into `hooks/install.ts` so `init` and `install-hooks` share one implementation; `install-hooks` is now a thin wrapper and reports "already installed" instead of silently rewriting an identical hook.
+
+- 6867550: PR comment is now exception-driven: one line when everything is fine, the problem in the open when it is not
+
+  The PR comment is read in three seconds, on every push, by someone who did not ask for it. The previous version was 38 lines and 245 words — 42% of them caveats repeated identically on every PR. A caveat that appears every time trains readers to skip it, so the one time it matters it goes unread. Verbosity was working against honesty.
+
+  Now:
+  - **Normal state is one line.** `**AIDA** ✅ 3 commits — agent 3 — every commit in this change set carries provenance.` Nineteen words in the open on this repo's own PRs, down from 245.
+  - **The exception is in the open, with the repair.** When commits lack provenance, the verdict line turns to ⚠️ with the count and coverage, followed by the commits themselves and the one-line fix (`aida install-hooks`, or the `prepare` recipe). The `defaultMode` reminder appears only when a prior is actually configured — it is a warning about a specific misunderstanding, not boilerplate.
+  - **Everything else folds into `<details>`** — scope and SHA, evidence breakdown, the autonomy table (zero rows omitted), and the interpretation limits. Present for whoever wants them, invisible to everyone else.
+  - **Dropped as noise for this surface:** the absolute repo path (meaningless in CI, you are already in the repo), the generation timestamp (GitHub shows the edit time), and autonomy rows with zero commits.
+
+  The full report (`aida report` on default-branch scope) is unchanged; this only touches the PR-scoped template. The comment is still upserted in place via the `<!-- aida-metrics-report -->` marker, so a PR never accumulates stale copies.
+
+### Patch Changes
+
+- b486167: Launch readiness: one positioning sentence across every surface, and the metadata search engines, social cards and LLMs actually read
+
+  A pre-launch scan found the project describing itself three different ways: the GitHub description promised to "measure the real impact of AI coding agents" — the exact claim the README says AIDA does not make — the landing's Twitter card still carried the pre-1.0 tagline, and npm called the CLI a "CLI for the AIDA auditable evidence ledger", which nobody searches for. This aligns all of them on one sentence: _An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove._
+  - **npm**: descriptions rewritten around that sentence; keywords with real search intent (`ai-attribution`, `provenance`, `claude-code`, `github-copilot`, `engineering-metrics`, `github-actions`); `homepage` points to the website; repository URL case-corrected.
+  - **Landing**: canonical URL (the old `og:url` had the wrong case and no trailing slash), `og:image`/`twitter:image` (the `summary_large_image` card had no image and rendered blank), aligned Twitter description, favicon, JSON-LD `SoftwareApplication` + `FAQPage`, and a new "What AIDA is — and is not" section written as question → answer. Bounded definitions and explicit limits are the passages LLM answers quote verbatim; AIDA's honesty is its GEO asset.
+  - **Crawl files**: `robots.txt`, `sitemap.xml`, `llms.txt`.
+  - **Repository**: `CONTRIBUTING.md` (the working agreements in second person), a single issue template — _Misleading number_, the bug report this project most wants — a PR template with the dogfood table and the never-stack rule, and a composite `action.yml` so a workflow becomes `uses: ceccode/AIDA-Metrics@v1` instead of 99 copied lines. The action runs `aida doctor` first: a shallow checkout is refused before it can produce a confidently wrong report.
+  - **README fold**: the positioning sentence first, and "What AIDA is not" promoted to its own heading — the most quotable thing the project has.
+
+  Nothing here changes what the tool computes.
+
+- Updated dependencies [b486167]
+  - @aida-dev/core@1.0.2
+  - @aida-dev/metrics@1.0.3
+
 ## 1.0.2
 
 ### Patch Changes
