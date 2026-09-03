@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ceccode.github.io/AIDA-Metrics/sitemap.xml

@@ -1,8 +1,8 @@
 <h1 align="center">📊 AIDA Metrics</h1>
 
 <p align="center">
-  <strong>AIDA — AI Development Accounting</strong><br/>
-  An auditable evidence ledger for AI-assisted software development.<br/>
+  <strong>An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.</strong><br/>
+  <sub>AIDA — AI Development Accounting</sub>
 </p>
 
 <p align="center">
@@ -20,7 +20,8 @@
   <a href="#ai-detection">AI Detection</a> •
   <a href="#metrics">Metrics</a> •
   <a href="#cicd-integration">CI/CD</a> •
-  <a href="https://ceccode.github.io/AIDA-Metrics/">Demo</a>
+  <a href="https://ceccode.github.io/AIDA-Metrics/">Website</a> •
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
 ---
@@ -36,7 +37,9 @@ Here, **accounting means keeping a traceable ledger of evidence, scope, assumpti
 - Are reverts or hotfix patterns over-represented for a cohort?
 - Is the evidence coverage high enough to compare cohorts at all?
 
-AIDA does **not** infer productivity, defects, deployment, causality, capitalization, or developer performance from Git history.
+### What AIDA is not
+
+AIDA does **not** infer productivity, defects, deployment, causality, capitalization, or developer performance from Git history. It does not estimate the value of software. Any number in a report is bounded by what the repository can actually establish, and the report says so next to the number.
 
 ## Features
 
@@ -63,7 +66,7 @@ npm install -g @aida-dev/cli
 Requires Node.js 22 or newer and pnpm.
 
 ```bash
-git clone https://github.com/ceccode/aida-metrics.git
+git clone https://github.com/ceccode/AIDA-Metrics.git
 cd aida-metrics
 pnpm install
 pnpm build

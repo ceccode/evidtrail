@@ -1,0 +1,38 @@
+# AIDA Metrics
+
+> An auditable ledger of AI provenance and change signals for git repositories — honest about what git can and cannot prove.
+
+AIDA (AI Development Accounting) is an open-source CLI and GitHub Action. It reads git history and produces a versioned `metrics.json` and a Markdown report describing, per commit, the declared or inferred autonomy level of AI participation (`none`, `autocomplete`, `assisted`, `agent`, or `unknown`), how that is known (`declared`, `inferred`, or no evidence), and repository-level change signals: fixed-horizon rapid-retouch rates and their trend over time.
+
+## What AIDA is not
+
+AIDA does not infer productivity, defects, deployment, causality, capitalization, or developer performance from git history. It does not estimate the value of software. "Accounting" here means keeping a traceable ledger of evidence, scope, assumptions, and outcomes.
+
+## How evidence is produced
+
+- A `prepare-commit-msg` hook, installed once per clone (or via a `package.json` `prepare` script), detects agent sessions from their environment and stamps an `AI-Mode:` trailer. This needs no per-commit discipline.
+- Tool co-author trailers (for example `Co-Authored-By: Claude`) are read as inferred evidence.
+- A commit with no signal stays `unknown`. It is never assumed to be human.
+- A configured `defaultMode` prior can place no-evidence commits in a cohort for analysis, but it never counts as evidence, never raises coverage, and is always labelled assumed. Cohort tables are withheld when every commit in them comes from the prior.
+
+## Honesty mechanisms worth knowing
+
+- Trends compare only mature periods: every period is measured through the same observation window, and a period is comparable only after it has been over for the full window. Otherwise every report would find quality declining.
+- Scope is explicit: default-branch ancestry by default; all refs and PR change sets are opt-in and labelled.
+- Analysis is deterministic from a collected snapshot; output schemas are versioned and readers refuse incompatible inputs.
+- Collection, analysis and reporting are local. Only `fetch-prs` and `comment` use the network, both opt-in.
+
+## Links
+
+- Repository: https://github.com/ceccode/AIDA-Metrics
+- npm: https://www.npmjs.com/package/@aida-dev/cli
+- README: https://github.com/ceccode/AIDA-Metrics#readme
+- Agent instructions: https://github.com/ceccode/AIDA-Metrics/blob/main/AGENTS.md
+- Security policy: https://github.com/ceccode/AIDA-Metrics/blob/main/SECURITY.md
+
+## Commands
+
+- `aida init` — set up config, commit hook, prepare script, CI workflow (additive)
+- `aida doctor` — preflight: clone depth, partial clone, config, hook, CI wiring
+- `aida` — collect → analyze → report
+- `aida collect`, `aida analyze`, `aida report`, `aida blame`, `aida fetch-prs`, `aida comment`, `aida install-hooks`

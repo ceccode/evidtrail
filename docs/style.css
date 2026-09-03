@@ -618,3 +618,12 @@ body {
         align-items: center;
     }
 }
+
+
+/* FAQ / What AIDA is not */
+.faq { padding: 4rem 0; }
+.faq h2 { text-align: center; margin-bottom: 1rem; }
+.faq-lead { max-width: 760px; margin: 0 auto 2.5rem; text-align: center; opacity: 0.85; line-height: 1.6; }
+.faq-list { max-width: 760px; margin: 0 auto; }
+.faq-list dt { font-weight: 600; margin-top: 1.75rem; }
+.faq-list dd { margin: 0.5rem 0 0; line-height: 1.65; opacity: 0.9; }

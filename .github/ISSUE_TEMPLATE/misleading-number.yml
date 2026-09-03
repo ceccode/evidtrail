@@ -1,0 +1,40 @@
+name: Misleading number
+description: A number in a report was arithmetically correct and still led to a wrong conclusion
+title: "[misleading] "
+labels: ["honesty"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the bug report AIDA most wants to receive. If a report made you believe something the repository does not support, that is a defect even if every digit is right.
+  - type: textarea
+    id: number
+    attributes:
+      label: The number, as the report showed it
+      description: Copy the line or table verbatim. Redact anything private.
+    validations:
+      required: true
+  - type: textarea
+    id: conclusion
+    attributes:
+      label: What it led you (or a reader) to conclude
+    validations:
+      required: true
+  - type: textarea
+    id: truth
+    attributes:
+      label: What the repository actually supports, and how you know
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: AIDA version
+      placeholder: "aida --version"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: A public repo and the exact commands are ideal; a description of the history shape is fine.

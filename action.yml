@@ -1,0 +1,92 @@
+name: AIDA Metrics
+description: Auditable AI provenance and change signals for your git repository — posts an evidence comment on pull requests.
+author: ceccode
+branding:
+  icon: check-square
+  color: blue
+
+# A composite action so the CLI runs with the version pinned here and the
+# comment is posted by GitHub's own `gh` in a step that never sees the code
+# built from the PR. Requires actions/checkout with fetch-depth: 0 first —
+# a shallow clone silently truncates every metric, and `aida doctor` will
+# refuse it.
+
+inputs:
+  since:
+    description: Only collect commits after this date (ISO or relative like 90d). Default is full history.
+    required: false
+    default: ''
+  scope:
+    description: "`pr` for the pull request change set, `default-branch` for the integrated history. Defaults to `pr` on pull_request events, `default-branch` otherwise."
+    required: false
+    default: auto
+  comment:
+    description: "Post (or update) the report as a PR comment. Needs the pull-requests: write permission."
+    required: false
+    default: 'true'
+  redact-authors:
+    description: Replace author identities with a per-run salted hash before anything leaves the runner.
+    required: false
+    default: 'true'
+  out-dir:
+    description: Where commit-stream.json, metrics.json and report.md are written.
+    required: false
+    default: ./.aida
+  cli-version:
+    description: "@aida-dev/cli version range to run."
+    required: false
+    default: '1'
+
+outputs:
+  report:
+    description: Path to the generated report.md
+    value: ${{ inputs.out-dir }}/report.md
+  metrics:
+    description: Path to the generated metrics.json
+    value: ${{ inputs.out-dir }}/metrics.json
+
+runs:
+  using: composite
+  steps:
+    - name: Preflight
+      shell: bash
+      run: npx --yes "@aida-dev/cli@${{ inputs.cli-version }}" doctor
+
+    - name: Collect, analyze, report
+      shell: bash
+      env:
+        SCOPE: ${{ inputs.scope }}
+        SINCE: ${{ inputs.since }}
+        OUT: ${{ inputs.out-dir }}
+        REDACT: ${{ inputs.redact-authors }}
+        CLI: "@aida-dev/cli@${{ inputs.cli-version }}"
+      run: |
+        scope="$SCOPE"
+        if [ "$scope" = "auto" ]; then
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then scope=pr; else scope=default-branch; fi
+        fi
+        args=(collect --out-dir "$OUT")
+        [ "$scope" = "pr" ] && args+=(--pr)
+        [ -n "$SINCE" ] && args+=(--since "$SINCE")
+        [ "$REDACT" = "true" ] && args+=(--redact-authors)
+        npx --yes "$CLI" "${args[@]}"
+        npx --yes "$CLI" analyze --out-dir "$OUT"
+        npx --yes "$CLI" report --out-dir "$OUT"
+
+    - name: Post the PR comment (upserted, one per PR)
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        OUT: ${{ inputs.out-dir }}
+      run: |
+        marker='<!-- aida-metrics-report -->'
+        comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+          --jq '.[] | select(.body | startswith("<!-- aida-metrics-report -->")) | .id' | head -n 1)
+        payload=$(jq -Rs --arg marker "$marker" '{body: ($marker + "\n" + .)}' < "$OUT/report.md")
+        if [ -n "$comment_id" ]; then
+          printf '%s' "$payload" | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" --input -
+        else
+          printf '%s' "$payload" | gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --input -
+        fi

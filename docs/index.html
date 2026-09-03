@@ -3,20 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIDA - AI Development Accounting</title>
-    <meta name="description" content="An auditable evidence ledger for AI-assisted software development: provenance, scope, and repository change signals with visible limits.">
-    
+    <title>AIDA — auditable AI provenance and change signals for git repositories</title>
+    <meta name="description" content="AIDA is an auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove. Declared vs inferred evidence, fixed-horizon rapid-retouch, trends that never compare immature periods.">
+    <link rel="canonical" href="https://ceccode.github.io/AIDA-Metrics/">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
     <!-- Open Graph -->
-    <meta property="og:title" content="AIDA - AI Development Accounting">
-    <meta property="og:description" content="Auditable evidence, scope, and repository change signals for AI-assisted development">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://ceccode.github.io/aida-metrics">
-    
+    <meta property="og:site_name" content="AIDA Metrics">
+    <meta property="og:title" content="AIDA — auditable AI provenance and change signals for git">
+    <meta property="og:description" content="An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.">
+    <meta property="og:url" content="https://ceccode.github.io/AIDA-Metrics/">
+    <meta property="og:image" content="https://ceccode.github.io/AIDA-Metrics/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="AIDA — an auditable ledger of AI provenance and change signals for git repositories">
+
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="AIDA - AI Development Accounting">
-    <meta name="twitter:description" content="Track and measure AI-assisted development in your repositories">
-    
+    <meta name="twitter:title" content="AIDA — auditable AI provenance and change signals for git">
+    <meta name="twitter:description" content="An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.">
+    <meta name="twitter:image" content="https://ceccode.github.io/AIDA-Metrics/og-image.png">
+
+    <!-- Structured data: what this is, and what it explicitly is not — the
+         bounded definitions LLMs and rich results quote verbatim. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "name": "AIDA Metrics",
+          "alternateName": "AIDA — AI Development Accounting",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Linux, macOS, Windows",
+          "softwareVersion": "1.0",
+          "license": "https://opensource.org/licenses/MIT",
+          "url": "https://ceccode.github.io/AIDA-Metrics/",
+          "downloadUrl": "https://www.npmjs.com/package/@aida-dev/cli",
+          "codeRepository": "https://github.com/ceccode/AIDA-Metrics",
+          "description": "An auditable ledger of AI provenance and change signals for git repositories. It records declared and inferred autonomy modes per commit, fixed-horizon rapid-retouch rates, and quality trends that never compare immature periods. It does not infer productivity, defects, deployment, causality, capitalization, or developer performance from git history.",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Does AIDA measure developer productivity or the ROI of AI coding tools?",
+              "acceptedAnswer": { "@type": "Answer", "text": "No. AIDA records provenance (who or what wrote a commit, and how that is known) and change signals (how often files are touched again within a fixed horizon). It does not infer productivity, defects, deployment, causality, capitalization, or developer performance, because git history cannot establish those." }
+            },
+            {
+              "@type": "Question",
+              "name": "How does AIDA know a commit was written by an AI agent without developers labelling commits?",
+              "acceptedAnswer": { "@type": "Answer", "text": "A prepare-commit-msg hook, installed once per clone (or automatically via a package.json prepare script), detects agent sessions such as Claude Code or Cursor from their environment and stamps an AI-Mode trailer. Tool co-author trailers are read as well. A commit with no signal stays unknown — it is never assumed to be human." }
+            },
+            {
+              "@type": "Question",
+              "name": "Why does AIDA sometimes refuse to show a comparison?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Because the comparison would describe an assumption, not the repository. Cohort tables appear only where at least one commit carries real evidence; a configured prior can move commits into a cohort but never creates a table on its own, never raises coverage, and is always labelled as assumed." }
+            },
+            {
+              "@type": "Question",
+              "name": "Why is the most recent month excluded from the trend?",
+              "acceptedAnswer": { "@type": "Answer", "text": "A period that ended yesterday has had one day to be reworked; a period from last year has had a year. Compared raw, every report would find quality declining. AIDA measures every period through the same observation window and compares only periods that have been over for the full window." }
+            },
+            {
+              "@type": "Question",
+              "name": "Does AIDA send my code or commit data anywhere?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Collection, analysis, and reporting are local and offline. Only two commands use the network, both opt-in: fetch-prs reads pull request outcomes from the forge API, and comment posts the report to a PR. Author identities can be redacted with --redact-authors." }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,8 +95,8 @@
                 <a href="#features">Features</a>
                 <a href="#install">Install</a>
                 <a href="#ci">CI/CD</a>
-                <a href="https://github.com/ceccode/aida-metrics#readme" target="_blank">Docs</a>
-                <a href="https://github.com/ceccode/aida-metrics" target="_blank">GitHub</a>
+                <a href="https://github.com/ceccode/AIDA-Metrics#readme" target="_blank">Docs</a>
+                <a href="https://github.com/ceccode/AIDA-Metrics" target="_blank">GitHub</a>
             </div>
         </nav>
     </header>
@@ -55,7 +117,7 @@
                         <code>npm install -g @aida-dev/cli</code>
                         <button class="copy-btn" id="copy-btn">Copy</button>
                     </div>
-                    <a href="https://github.com/ceccode/aida-metrics" class="btn btn-secondary">
+                    <a href="https://github.com/ceccode/AIDA-Metrics" class="btn btn-secondary">
                         View on GitHub
                     </a>
                 </div>
@@ -225,15 +287,34 @@
             </div>
         </section>
 
+        <section id="faq" class="faq">
+            <div class="container">
+                <h2>What AIDA is — and is not</h2>
+                <p class="faq-lead">AIDA does <strong>not</strong> infer productivity, defects, deployment, causality, capitalization, or developer performance from git history. It records what git can actually establish, with the limits kept visible.</p>
+                <dl class="faq-list">
+                    <dt>Does AIDA measure developer productivity or the ROI of AI coding tools?</dt>
+                    <dd>No. It records <em>provenance</em> — who or what wrote a commit, and how that is known — and <em>change signals</em> — how often files are touched again within a fixed horizon. Nothing in git history can establish productivity or value, so AIDA does not claim it.</dd>
+                    <dt>How does it know a commit came from an AI agent, without anyone labelling commits?</dt>
+                    <dd>A <code>prepare-commit-msg</code> hook, installed once per clone or automatically through a <code>package.json</code> <code>prepare</code> script, detects agent sessions (Claude Code, Cursor) from their environment and stamps an <code>AI-Mode</code> trailer. Tool co-author trailers are read as well. A commit with no signal stays <code>unknown</code> — it is never assumed to be human.</dd>
+                    <dt>Why does it sometimes refuse to show a comparison?</dt>
+                    <dd>Because the comparison would describe an assumption, not the repository. Cohort tables appear only where at least one commit carries real evidence. A configured prior can place commits in a cohort, but it never creates a table on its own, never raises coverage, and is always labelled <em>assumed</em>.</dd>
+                    <dt>Why is the most recent month left out of the trend?</dt>
+                    <dd>A period that ended yesterday has had one day to be reworked; one from last year has had a year. Compared raw, every report would find quality declining. Every period is measured through the same observation window, and only periods that have been over for the full window are compared.</dd>
+                    <dt>Does it send code or commit data anywhere?</dt>
+                    <dd>Collection, analysis and reporting are local and offline. Two commands use the network, both opt-in: <code>fetch-prs</code> reads pull request outcomes from the forge API, <code>comment</code> posts the report to a PR. Author identities can be redacted.</dd>
+                </dl>
+            </div>
+        </section>
+
         <section class="cta">
             <div class="container">
                 <h2>Ready to make AI evidence auditable?</h2>
                 <p>Start with the repository signals Git can support — and keep their limits visible.</p>
                 <div class="cta-actions">
-                    <a href="https://github.com/ceccode/aida-metrics" class="btn btn-primary">
+                    <a href="https://github.com/ceccode/AIDA-Metrics" class="btn btn-primary">
                         Get Started
                     </a>
-                    <a href="https://github.com/ceccode/aida-metrics#contributing" class="btn btn-secondary">
+                    <a href="https://github.com/ceccode/AIDA-Metrics#contributing" class="btn btn-secondary">
                         Contribute
                     </a>
                 </div>
@@ -251,15 +332,15 @@
                 <div class="footer-links">
                     <div class="footer-section">
                         <h4>Project</h4>
-                        <a href="https://github.com/ceccode/aida-metrics">GitHub</a>
-                        <a href="https://github.com/ceccode/aida-metrics/issues">Issues</a>
-                        <a href="https://github.com/ceccode/aida-metrics/blob/main/CODE_OF_CONDUCT.md">Code of Conduct</a>
+                        <a href="https://github.com/ceccode/AIDA-Metrics">GitHub</a>
+                        <a href="https://github.com/ceccode/AIDA-Metrics/issues">Issues</a>
+                        <a href="https://github.com/ceccode/AIDA-Metrics/blob/main/CODE_OF_CONDUCT.md">Code of Conduct</a>
                     </div>
                     <div class="footer-section">
                         <h4>Resources</h4>
-                        <a href="https://github.com/ceccode/aida-metrics#readme">Documentation</a>
+                        <a href="https://github.com/ceccode/AIDA-Metrics#readme">Documentation</a>
                         <a href="https://www.npmjs.com/package/@aida-dev/cli">NPM Package</a>
-                        <a href="https://github.com/ceccode/aida-metrics/blob/main/LICENSE">MIT License</a>
+                        <a href="https://github.com/ceccode/AIDA-Metrics/blob/main/LICENSE">MIT License</a>
                     </div>
                 </div>
             </div>
