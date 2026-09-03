@@ -11,6 +11,7 @@ import { createReportCommand } from './commands/report.js';
 import { createCommentCommand } from './commands/comment.js';
 import { createInitCommand } from './commands/init.js';
 import { createDoctorCommand } from './commands/doctor.js';
+import { createRunCommand } from './commands/run.js';
 
 // Report the real package version: a hardcoded '0.0.0' left users unable to
 // tell which build they were running.
@@ -21,22 +22,7 @@ const program = new Command();
 program
   .name('aida')
   .description('AIDA (AI Development Accounting) - Metrics for AI-assisted development')
-  .version(version)
-  // `aida` with no subcommand runs the whole pipeline. collect → analyze →
-  // report is plumbing; a first-time user should not have to learn it to
-  // get a report. The granular commands stay for CI and for anyone who
-  // wants one stage at a time.
-  .option('--repo <path>', 'Repository path', process.cwd())
-  .option('--since <date>', 'Start date (ISO or relative like 90d)')
-  .option('--out-dir <path>', 'Output directory', './aida-output')
-  .option('--verbose', 'Verbose logging', false)
-  .action(async (options: { repo: string; since?: string; outDir: string; verbose: boolean }) => {
-    const common = ['--out-dir', options.outDir, ...(options.verbose ? ['--verbose'] : [])];
-    const collectArgs = ['--repo', options.repo, ...common, ...(options.since ? ['--since', options.since] : [])];
-    await createCollectCommand().parseAsync(collectArgs, { from: 'user' });
-    await createAnalyzeCommand().parseAsync(common, { from: 'user' });
-    await createReportCommand().parseAsync(common, { from: 'user' });
-  });
+  .version(version);
 
 // Add commands
 program.addCommand(createCollectCommand());
@@ -48,5 +34,8 @@ program.addCommand(createReportCommand());
 program.addCommand(createCommentCommand());
 program.addCommand(createInitCommand());
 program.addCommand(createDoctorCommand());
+// Default subcommand: `aida --since 90d` runs the pipeline. See run.ts for why
+// this is a subcommand and not root options.
+program.addCommand(createRunCommand(), { isDefault: true });
 
 program.parse();
