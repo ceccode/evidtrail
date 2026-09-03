@@ -670,7 +670,31 @@ The v3 contract binds artifacts to a labelled commit scope and head snapshot, ma
 
 ### GitHub Actions (with PR comments)
 
-The job that posts comments needs `contents: read` and `pull-requests: write`; organizations that default `GITHUB_TOKEN` to read-only must declare these permissions explicitly.
+The shortest path is the composite action. It runs `aida doctor` first, so a shallow checkout is refused before it can produce a confidently wrong report, and it posts the comment in its own step so the write token never meets PR-built code:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+
+steps:
+  - uses: actions/checkout@v5
+    with:
+      fetch-depth: 0
+  - uses: ceccode/AIDA-Metrics@v1
+    with:
+      comment: true
+```
+
+This is what lands on the pull request when every commit carries provenance — one line, with scope, evidence and limits folded underneath:
+
+<p align="center">
+  <img src="docs/pr-comment.png" alt="AIDA PR comment: one verdict line, 'every commit in this change set carries provenance', with a collapsed Details fold" width="800">
+</p>
+
+When commits lack provenance the line turns to ⚠️ with the count and coverage, followed by the commits themselves and the one-line repair. Nothing is repeated on every PR that does not need to be read on every PR.
+
+If you prefer to run the steps yourself, the job that posts comments needs `contents: read` and `pull-requests: write`; organizations that default `GITHUB_TOKEN` to read-only must declare these permissions explicitly.
 
 ```yaml
 - uses: actions/checkout@v5
