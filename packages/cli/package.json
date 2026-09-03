@@ -1,6 +1,6 @@
 {
   "name": "@aida-dev/cli",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Auditable AI provenance and change signals from git — CLI and GitHub Action. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
   "type": "module",
   "main": "dist/index.js",

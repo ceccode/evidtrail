@@ -1,6 +1,6 @@
 {
   "name": "@aida-dev/metrics",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Deterministic rapid-retouch, trend, cohort, and outcome metrics for AIDA. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
   "type": "module",
   "main": "dist/index.js",
