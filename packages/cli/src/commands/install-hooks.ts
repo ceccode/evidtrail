@@ -1,19 +1,7 @@
 import { Command } from 'commander';
 import { createLogger, describeError } from '@aida-dev/core';
-import { promises as fs } from 'fs';
-import { join } from 'path';
-import { HOOK_END_MARKER, HOOK_MARKER, HOOK_SCRIPT } from '../hooks/prepare-commit-msg.js';
-import { HOOK_NAME, isAidaHook, isGitRepository, resolveHooksDir } from '../hooks/detect.js';
-
-// Removes only AIDA's marked block, leaving any surrounding hook intact.
-function stripAidaBlock(content: string): string {
-  const start = content.indexOf(HOOK_MARKER);
-  const end = content.indexOf(HOOK_END_MARKER);
-  if (start === -1 || end === -1) return content;
-  const before = content.slice(0, start);
-  const after = content.slice(end + HOOK_END_MARKER.length);
-  return `${before.trimEnd()}\n${after.trimStart()}`.trim() + '\n';
-}
+import { isGitRepository } from '../hooks/detect.js';
+import { installAidaHook, uninstallAidaHook } from '../hooks/install.js';
 
 export function createInstallHooksCommand(): Command {
   return new Command('install-hooks')
@@ -42,54 +30,35 @@ export function createInstallHooksCommand(): Command {
           return;
         }
 
-        const hooksDir = await resolveHooksDir(options.repo);
-        const hookPath = join(hooksDir, HOOK_NAME);
-
-        let existing: string | null = null;
-        try {
-          existing = await fs.readFile(hookPath, 'utf-8');
-        } catch {
-          existing = null;
-        }
-
         if (options.uninstall) {
-          if (!existing || !isAidaHook(existing)) {
-            logger.info('No AIDA hook found: nothing to uninstall.');
-            return;
-          }
-          const remainder = stripAidaBlock(existing);
-          // Only our block was there → remove the file entirely
-          if (remainder.replace(/^#!.*\n?/, '').trim() === '') {
-            await fs.rm(hookPath);
-            logger.info(`Removed ${hookPath}`);
-          } else {
-            await fs.writeFile(hookPath, remainder, { mode: 0o755 });
-            logger.info(`Removed the AIDA block from ${hookPath}, leaving the rest intact`);
-          }
+          const result = await uninstallAidaHook(options.repo);
+          if (result.status === 'absent') logger.info('No AIDA hook found: nothing to uninstall.');
+          else if (result.status === 'removed') logger.info(`Removed ${result.hookPath}`);
+          else logger.info(`Removed the AIDA block from ${result.hookPath}, leaving the rest intact`);
           return;
         }
 
-        if (existing && !isAidaHook(existing) && !options.force) {
+        const result = await installAidaHook(options.repo, { force: Boolean(options.force) });
+        if (result.status === 'refused') {
           logger.error(
-            `${hookPath} already exists and was not written by AIDA.\n` +
-              'Refusing to overwrite someone else\'s hook. Re-run with --force to replace it, ' +
+            `${result.hookPath} already exists and was not written by AIDA.\n` +
+              "Refusing to overwrite someone else's hook. Re-run with --force to replace it, " +
               'or add the AI-Mode trailer from your own hook.'
           );
           process.exit(1);
         }
 
-        await fs.mkdir(hooksDir, { recursive: true });
-        await fs.writeFile(hookPath, HOOK_SCRIPT, { mode: 0o755 });
-
-        logger.info(`Installed ${hookPath}`);
+        logger.info(
+          result.status === 'unchanged'
+            ? `Hook already installed at ${result.hookPath}`
+            : `Installed ${result.hookPath}`
+        );
         logger.info(
           'Commits will now carry an `AI-Mode:` trailer when the mode is known ' +
             '(AIDA_MODE env var, a detected agent environment, or defaultMode in .aida.json).'
         );
       } catch (error) {
-        logger.error(
-          `Hook installation failed: ${describeError(error)}`
-        );
+        logger.error(`Hook installation failed: ${describeError(error)}`);
         process.exit(1);
       }
     });

@@ -101,14 +101,15 @@ npm install -g @aida-dev/cli
 # Navigate to your Git repository
 cd /path/to/your/repo
 
-# Collect commits from last 90 days
-aida collect --since 90d
+# One-time setup: starter config, commit hook, prepare script, CI workflow.
+# Additive — nothing that already exists is overwritten.
+aida init
 
-# Analyze the data
-aida analyze
+# Check this clone before trusting a report (shallow? hook? config? CI?)
+aida doctor
 
-# Generate reports
-aida report
+# Run the whole pipeline: collect → analyze → report
+aida --since 90d
 ```
 
 The first report is historical and may honestly contain `unknown`. To declare provenance for future commits, install the hook and configure a truthful mode through `AIDA_MODE` or the repository's `.aida.json`; when AIDA cannot determine a mode, it writes no trailer.
@@ -153,6 +154,31 @@ This is a TypeScript monorepo with three main packages:
 ## CLI Usage
 
 ### Commands
+
+#### `aida init`
+
+Set up AIDA in a repository in one command — `.aida.json`, the commit hook for this clone, the `prepare` script for every other clone, and a GitHub workflow. Never overwrites: anything that exists is reported and left alone.
+
+```bash
+aida init                       # no prior; add --default-mode agent to opt into one
+aida init --no-workflow         # skip .github/workflows/aida.yml
+```
+
+#### `aida doctor`
+
+Ask every question that can make a run quietly wrong, before running: clone depth, partial clone, default branch, config validity, hook in this clone, `prepare` script, CI wiring. Non-green lines carry their fix; exit code is non-zero only for blockers.
+
+```bash
+aida doctor
+```
+
+#### `aida`
+
+With no subcommand, runs `collect → analyze → report`. The granular commands below remain for CI and single-stage use.
+
+```bash
+aida --since 90d
+```
 
 #### `aida collect`
 
@@ -203,6 +229,22 @@ aida report --out-dir ./aida-output
 ```
 
 ### Options
+
+#### `aida init`
+
+- `--repo <path>` - Repository path (default: current directory)
+- `--default-mode <value>` - Write a prior into `.aida.json`: `none` | `autocomplete` | `assisted` | `agent` (default: none written)
+- `--no-workflow` - Do not write `.github/workflows/aida.yml`
+- `--no-prepare` - Do not add the `prepare` script to `package.json`
+
+#### `aida doctor`
+
+- `--repo <path>` - Repository path (default: current directory)
+- `--json` - Machine-readable output
+
+#### `aida` (no subcommand)
+
+- `--repo <path>`, `--since <date>`, `--out-dir <path>`, `--verbose` - passed through to the pipeline
 
 #### `aida collect`
 
