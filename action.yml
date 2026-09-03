@@ -1,4 +1,4 @@
-name: AIDA Metrics
+name: evidtrail
 description: Auditable AI provenance and change signals for your git repository — posts an evidence comment on pull requests.
 author: ceccode
 branding:
@@ -8,7 +8,7 @@ branding:
 # A composite action so the CLI runs with the version pinned here and the
 # comment is posted by GitHub's own `gh` in a step that never sees the code
 # built from the PR. Requires actions/checkout with fetch-depth: 0 first —
-# a shallow clone silently truncates every metric, and `aida doctor` will
+# a shallow clone silently truncates every metric, and `evidtrail doctor` will
 # refuse it.
 
 inputs:
@@ -31,9 +31,9 @@ inputs:
   out-dir:
     description: Where commit-stream.json, metrics.json and report.md are written.
     required: false
-    default: ./.aida
+    default: ./.evidtrail
   cli-version:
-    description: "@aida-dev/cli version range to run."
+    description: "@evidtrail/cli version range to run."
     required: false
     default: '1'
 
@@ -50,7 +50,7 @@ runs:
   steps:
     - name: Preflight
       shell: bash
-      run: npx --yes "@aida-dev/cli@${{ inputs.cli-version }}" doctor
+      run: npx --yes "@evidtrail/cli@${{ inputs.cli-version }}" doctor
 
     - name: Collect, analyze, report
       shell: bash
@@ -59,7 +59,7 @@ runs:
         SINCE: ${{ inputs.since }}
         OUT: ${{ inputs.out-dir }}
         REDACT: ${{ inputs.redact-authors }}
-        CLI: "@aida-dev/cli@${{ inputs.cli-version }}"
+        CLI: "@evidtrail/cli@${{ inputs.cli-version }}"
       run: |
         scope="$SCOPE"
         if [ "$scope" = "auto" ]; then
@@ -81,9 +81,9 @@ runs:
         PR_NUMBER: ${{ github.event.pull_request.number }}
         OUT: ${{ inputs.out-dir }}
       run: |
-        marker='<!-- aida-metrics-report -->'
+        marker='<!-- evidtrail-report -->'
         comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
-          --jq '.[] | select(.body | startswith("<!-- aida-metrics-report -->")) | .id' | head -n 1)
+          --jq '.[] | select(.body | startswith("<!-- evidtrail-report -->") or startswith("<!-- aida-metrics-report -->")) | .id' | head -n 1)
         payload=$(jq -Rs --arg marker "$marker" '{body: ($marker + "\n" + .)}' < "$OUT/report.md")
         if [ -n "$comment_id" ]; then
           printf '%s' "$payload" | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" --input -

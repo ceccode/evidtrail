@@ -8,7 +8,7 @@ describe('assertSchemaVersion', () => {
 
   it('rejects an older version with an actionable message', () => {
     expect(() => assertSchemaVersion({ schemaVersion: 1 }, 2, 'metrics.json', 'Rerun x.')).toThrow(
-      /metrics\.json has schema v1, but this version of AIDA reads schema v2\. Rerun x\./
+      /metrics\.json has schema v1, but this version of evidtrail reads schema v2\. Rerun x\./
     );
   });
 

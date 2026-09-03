@@ -310,7 +310,7 @@ Co-authored-by: Claude <noreply@anthropic.com>`
 describe('github.com is not an AI signal by itself (external-repo false positives)', () => {
   const tagger = createAITagger();
 
-  // Found by running AIDA against commander.js: 2 of its 3 "AI" detections
+  // Found by running evidtrail against commander.js: 2 of its 3 "AI" detections
   // were ordinary humans who co-authored via the GitHub web UI.
   it('does not flag a human co-author on users.noreply.github.com', () => {
     const cases = [
@@ -344,7 +344,7 @@ describe('github.com is not an AI signal by itself (external-repo false positive
 describe('an unnamed bot co-author is not an AI signal (external-repo false positives)', () => {
   const tagger = createAITagger();
 
-  // Found by running AIDA against babel: 47 of its 52 "AI" detections were
+  // Found by running evidtrail against babel: 47 of its 52 "AI" detections were
   // ordinary PRs co-authored by "Babel Bot", the project's own release and
   // formatting bot. The old `Co-authored-by:.*bot.*` rule read "a bot
   // participated" as "AI wrote this".

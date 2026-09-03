@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
-// Line-level blame data (#23). Produced by `aida blame`, consumed by
-// `aida analyze` when present.
+// Line-level blame data (#23). Produced by `evidtrail blame`, consumed by
+// `evidtrail analyze` when present.
 //
 // Kept in its own file — and behind its own command — because blame runs one
-// git process per file and is by far the most expensive thing AIDA does.
+// git process per file and is by far the most expensive thing evidtrail does.
 // `collect` stays fast; line-level analysis is an explicit opt-in step.
 // v2 adds `blamedPaths`: the survival rate divides surviving AI lines by AI
 // lines added, and without the file list those two numbers were measured

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PRCommit, PRStream, PullRequest } from '@aida-dev/core';
+import { PRCommit, PRStream, PullRequest } from '@evidtrail/core';
 import { calculatePRAcceptance, prAttribution, prMode } from './pr-acceptance.js';
 
 function commit(

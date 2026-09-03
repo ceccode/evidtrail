@@ -40,7 +40,7 @@ export function assertNoRetiredConfigKeys(raw: unknown): void {
   const old = String((raw as { defaultAttribution: unknown }).defaultAttribution);
   const suggestion = RETIRED_TO_MODE[old] ?? 'assisted';
   throw new Error(
-    `.aida.json uses "defaultAttribution", which was replaced by "defaultMode" in schema v2 (#25): ` +
+    `.evidtrail.json uses "defaultAttribution", which was replaced by "defaultMode" in schema v2 (#25): ` +
       `the prior now names an autonomy level, not an AI/human label. ` +
       `Replace "defaultAttribution": "${old}" with "defaultMode": "${suggestion}". ` +
       `Leaving it would silently change which commits join which cohort.`

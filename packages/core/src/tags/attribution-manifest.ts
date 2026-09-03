@@ -4,7 +4,10 @@ import { join } from 'path';
 import { AIMode, AITagResult, tagFromAxes } from './ai-tags.js';
 import { Logger } from '../utils/log.js';
 
-export const MANIFEST_FILENAME = 'aida-attribution.json';
+export const MANIFEST_FILENAME = 'evidtrail-attribution.json';
+// Pre-rename name, read for one release: a manifest is retroactive evidence,
+// and losing it on upgrade would turn declared commits back into unknown.
+export const LEGACY_MANIFEST_FILENAME = 'aida-attribution.json';
 
 const ManifestMode = z.enum(['autocomplete', 'assisted', 'agent']);
 
@@ -54,21 +57,28 @@ export function indexManifest(manifest: AttributionManifest): ManifestIndex {
   };
 }
 
-// Loads <repoPath>/aida-attribution.json. Missing file → null (manifest is
+// Loads <repoPath>/evidtrail-attribution.json. Missing file → null (manifest is
 // optional). Invalid file → warning, null: a broken manifest must never make
 // collect fail.
 export async function loadAttributionManifest(
   repoPath: string,
   logger?: Logger
 ): Promise<AttributionManifest | null> {
-  const manifestPath = join(repoPath, MANIFEST_FILENAME);
-
-  let raw: string;
-  try {
-    raw = await readFile(manifestPath, 'utf-8');
-  } catch {
-    return null; // no manifest — the common case
+  let raw: string | null = null;
+  for (const name of [MANIFEST_FILENAME, LEGACY_MANIFEST_FILENAME]) {
+    try {
+      raw = await readFile(join(repoPath, name), 'utf-8');
+    } catch {
+      continue;
+    }
+    if (name === LEGACY_MANIFEST_FILENAME) {
+      logger?.warn(
+        `${LEGACY_MANIFEST_FILENAME} is the pre-rename manifest name and will stop being read in the next major — rename it to ${MANIFEST_FILENAME}.`
+      );
+    }
+    break;
   }
+  if (raw === null) return null; // no manifest — the common case
 
   try {
     const manifest = AttributionManifest.parse(JSON.parse(raw));

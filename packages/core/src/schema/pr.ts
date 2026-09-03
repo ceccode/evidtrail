@@ -8,7 +8,7 @@ import { z } from 'zod';
 // deleted.
 //
 // Two deliberate constraints:
-//   - **No author identity is ever stored.** AIDA compares cohorts, never
+//   - **No author identity is ever stored.** evidtrail compares cohorts, never
 //     people (#35). A PR record carries its number, terminal state, dates,
 //     and the attribution of its commits — nothing that names anyone.
 //   - **Attribution comes from the PR's own commit messages** as returned by

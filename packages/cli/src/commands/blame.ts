@@ -1,10 +1,10 @@
 import { Command } from 'commander';
-import { collectBlame, createLogger, describeError, writeJSON } from '@aida-dev/core';
-import { categorizeFile } from '@aida-dev/metrics';
+import { collectBlame, createLogger, describeError, writeJSON } from '@evidtrail/core';
+import { categorizeFile } from '@evidtrail/metrics';
 import { join } from 'path';
 
-// `aida blame` (#23) — line-level attribution, in its own command because it
-// runs one git process per file and is the most expensive thing AIDA does.
+// `evidtrail blame` (#23) — line-level attribution, in its own command because it
+// runs one git process per file and is the most expensive thing evidtrail does.
 // `collect` stays fast; this is an explicit opt-in step, same shape as
 // `fetch-prs`.
 
@@ -20,7 +20,7 @@ export function createBlameCommand(): Command {
     .option('--ref <ref>', 'Git ref to blame (default: HEAD)', 'HEAD')
     .option('--max-files <n>', 'Stop after this many files (bounds runtime)')
     .option('--include-generated', 'Also blame lockfiles and generated output', false)
-    .option('--out-dir <path>', 'Output directory', './aida-output')
+    .option('--out-dir <path>', 'Output directory', './evidtrail-output')
     .option('--verbose', 'Verbose logging', false)
     .action(async (options) => {
       const logger = createLogger(Boolean(options.verbose));

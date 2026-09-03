@@ -1,7 +1,10 @@
 import type { CIProvider, PRIdentifier } from './types.js';
 import { readFileSync } from 'fs';
 
-const MARKER = '<!-- aida-metrics-report -->';
+const MARKER = '<!-- evidtrail-report -->';
+// Comments posted before the rename carry the old marker. They must still be
+// found and replaced, or every PR open across the upgrade grows a second copy.
+const LEGACY_MARKER = '<!-- aida-metrics-report -->';
 
 function sanitizeErrorBody(text: string, maxLength = 200): string {
   // Strip potential tokens, auth headers, and URLs with credentials
@@ -97,7 +100,9 @@ export class GitHubProvider implements CIProvider {
     if (!response.ok) return null;
 
     const comments = (await response.json()) as Array<{ id: number; body: string }>;
-    const existing = comments.find((c) => c.body.startsWith(marker));
+    const existing = comments.find(
+      (c) => c.body.startsWith(marker) || c.body.startsWith(LEGACY_MARKER)
+    );
     return existing?.id || null;
   }
 

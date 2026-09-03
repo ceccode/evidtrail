@@ -3,27 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIDA — auditable AI provenance and change signals for git repositories</title>
-    <meta name="description" content="AIDA is an auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove. Declared vs inferred evidence, fixed-horizon rapid-retouch, trends that never compare immature periods.">
-    <link rel="canonical" href="https://ceccode.github.io/AIDA-Metrics/">
+    <title>evidtrail — auditable AI provenance and change signals for git repositories</title>
+    <meta name="description" content="evidtrail is an auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove. Declared vs inferred evidence, fixed-horizon rapid-retouch, trends that never compare immature periods.">
+    <link rel="canonical" href="https://ceccode.github.io/evidtrail/">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="AIDA Metrics">
-    <meta property="og:title" content="AIDA — auditable AI provenance and change signals for git">
+    <meta property="og:site_name" content="evidtrail">
+    <meta property="og:title" content="evidtrail — auditable AI provenance and change signals for git">
     <meta property="og:description" content="An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.">
-    <meta property="og:url" content="https://ceccode.github.io/AIDA-Metrics/">
-    <meta property="og:image" content="https://ceccode.github.io/AIDA-Metrics/og-image.png">
+    <meta property="og:url" content="https://ceccode.github.io/evidtrail/">
+    <meta property="og:image" content="https://ceccode.github.io/evidtrail/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="AIDA — an auditable ledger of AI provenance and change signals for git repositories">
+    <meta property="og:image:alt" content="evidtrail — an auditable ledger of AI provenance and change signals for git repositories">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="AIDA — auditable AI provenance and change signals for git">
+    <meta name="twitter:title" content="evidtrail — auditable AI provenance and change signals for git">
     <meta name="twitter:description" content="An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.">
-    <meta name="twitter:image" content="https://ceccode.github.io/AIDA-Metrics/og-image.png">
+    <meta name="twitter:image" content="https://ceccode.github.io/evidtrail/og-image.png">
 
     <!-- Structured data: what this is, and what it explicitly is not — the
          bounded definitions LLMs and rich results quote verbatim. -->
@@ -33,15 +33,15 @@
       "@graph": [
         {
           "@type": "SoftwareApplication",
-          "name": "AIDA Metrics",
-          "alternateName": "AIDA — AI Development Accounting",
+          "name": "evidtrail",
+          "alternateName": "AIDA Metrics",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Linux, macOS, Windows",
           "softwareVersion": "1.0",
           "license": "https://opensource.org/licenses/MIT",
-          "url": "https://ceccode.github.io/AIDA-Metrics/",
-          "downloadUrl": "https://www.npmjs.com/package/@aida-dev/cli",
-          "codeRepository": "https://github.com/ceccode/AIDA-Metrics",
+          "url": "https://ceccode.github.io/evidtrail/",
+          "downloadUrl": "https://www.npmjs.com/package/@evidtrail/cli",
+          "codeRepository": "https://github.com/ceccode/evidtrail",
           "description": "An auditable ledger of AI provenance and change signals for git repositories. It records declared and inferred autonomy modes per commit, fixed-horizon rapid-retouch rates, and quality trends that never compare immature periods. It does not infer productivity, defects, deployment, causality, capitalization, or developer performance from git history.",
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
         },
@@ -50,27 +50,32 @@
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "Does AIDA measure developer productivity or the ROI of AI coding tools?",
-              "acceptedAnswer": { "@type": "Answer", "text": "No. AIDA records provenance (who or what wrote a commit, and how that is known) and change signals (how often files are touched again within a fixed horizon). It does not infer productivity, defects, deployment, causality, capitalization, or developer performance, because git history cannot establish those." }
+              "name": "Wasn't evidtrail called AIDA Metrics?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes, until version 1.1. evidtrail is the same tool under a name that survives a search: AIDA collided with the marketing funnel and an opera, and its expansion, AI Development Accounting, promised a cost-and-value reading the tool refuses to make. The @aida-dev packages, .aida.json, AIDA_MODE and the aida command keep working for one release and point at their new names." }
             },
             {
               "@type": "Question",
-              "name": "How does AIDA know a commit was written by an AI agent without developers labelling commits?",
+              "name": "Does evidtrail measure developer productivity or the ROI of AI coding tools?",
+              "acceptedAnswer": { "@type": "Answer", "text": "No. evidtrail records provenance (who or what wrote a commit, and how that is known) and change signals (how often files are touched again within a fixed horizon). It does not infer productivity, defects, deployment, causality, capitalization, or developer performance, because git history cannot establish those." }
+            },
+            {
+              "@type": "Question",
+              "name": "How does evidtrail know a commit was written by an AI agent without developers labelling commits?",
               "acceptedAnswer": { "@type": "Answer", "text": "A prepare-commit-msg hook, installed once per clone (or automatically via a package.json prepare script), detects agent sessions such as Claude Code or Cursor from their environment and stamps an AI-Mode trailer. Tool co-author trailers are read as well. A commit with no signal stays unknown — it is never assumed to be human." }
             },
             {
               "@type": "Question",
-              "name": "Why does AIDA sometimes refuse to show a comparison?",
+              "name": "Why does evidtrail sometimes refuse to show a comparison?",
               "acceptedAnswer": { "@type": "Answer", "text": "Because the comparison would describe an assumption, not the repository. Cohort tables appear only where at least one commit carries real evidence; a configured prior can move commits into a cohort but never creates a table on its own, never raises coverage, and is always labelled as assumed." }
             },
             {
               "@type": "Question",
               "name": "Why is the most recent month excluded from the trend?",
-              "acceptedAnswer": { "@type": "Answer", "text": "A period that ended yesterday has had one day to be reworked; a period from last year has had a year. Compared raw, every report would find quality declining. AIDA measures every period through the same observation window and compares only periods that have been over for the full window." }
+              "acceptedAnswer": { "@type": "Answer", "text": "A period that ended yesterday has had one day to be reworked; a period from last year has had a year. Compared raw, every report would find quality declining. evidtrail measures every period through the same observation window and compares only periods that have been over for the full window." }
             },
             {
               "@type": "Question",
-              "name": "Does AIDA send my code or commit data anywhere?",
+              "name": "Does evidtrail send my code or commit data anywhere?",
               "acceptedAnswer": { "@type": "Answer", "text": "Collection, analysis, and reporting are local and offline. Only two commands use the network, both opt-in: fetch-prs reads pull request outcomes from the forge API, and comment posts the report to a PR. Author identities can be redacted with --redact-authors." }
             }
           ]
@@ -88,15 +93,15 @@
     <header class="header">
         <nav class="nav">
             <div class="nav-brand">
-                <h1><span class="brand-aida">AIDA</span> <span class="brand-metrics">Metrics</span></h1>
+                <h1><span class="brand-evidtrail">evidtrail</span> <span class="brand-metrics">Metrics</span></h1>
                 <span class="tagline">An auditable evidence ledger for AI-assisted software development</span>
             </div>
             <div class="nav-links">
                 <a href="#features">Features</a>
                 <a href="#install">Install</a>
                 <a href="#ci">CI/CD</a>
-                <a href="https://github.com/ceccode/AIDA-Metrics#readme" target="_blank">Docs</a>
-                <a href="https://github.com/ceccode/AIDA-Metrics" target="_blank">GitHub</a>
+                <a href="https://github.com/ceccode/evidtrail#readme" target="_blank">Docs</a>
+                <a href="https://github.com/ceccode/evidtrail" target="_blank">GitHub</a>
             </div>
         </nav>
     </header>
@@ -109,15 +114,15 @@
                     <span class="gradient-text">AI-assisted development</span>
                 </h1>
                 <p class="hero-subtitle">
-                    AIDA records scoped evidence, declared autonomy, and repository change signals—
+                    evidtrail records scoped evidence, declared autonomy, and repository change signals—
                     with assumptions and limits kept visible.
                 </p>
                 <div class="hero-actions">
                     <div class="install-command">
-                        <code>npm install -g @aida-dev/cli</code>
+                        <code>npm install -g @evidtrail/cli</code>
                         <button class="copy-btn" id="copy-btn">Copy</button>
                     </div>
-                    <a href="https://github.com/ceccode/AIDA-Metrics" class="btn btn-secondary">
+                    <a href="https://github.com/ceccode/evidtrail" class="btn btn-secondary">
                         View on GitHub
                     </a>
                 </div>
@@ -137,22 +142,22 @@
                     </div>
                     <div class="terminal-body">
                         <div class="terminal-line">
-                            <span class="prompt">$</span> aida init
+                            <span class="prompt">$</span> evidtrail init
                         </div>
                         <div class="terminal-line output">
-                            + .aida.json &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;created — no prior
+                            + .evidtrail.json &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;created — no prior
                         </div>
                         <div class="terminal-line output">
                             + commit hook &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;installed
                         </div>
                         <div class="terminal-line output">
-                            + package.json prepare &nbsp; &nbsp; &nbsp; &nbsp;created — aida install-hooks --if-git
+                            + package.json prepare &nbsp; &nbsp; &nbsp; &nbsp;created — evidtrail install-hooks --if-git
                         </div>
                         <div class="terminal-line output">
-                            + .github/workflows/aida.yml &nbsp;created — PR comment, minimal permissions
+                            + .github/workflows/evidtrail.yml &nbsp;created — PR comment, minimal permissions
                         </div>
                         <div class="terminal-line">
-                            <span class="prompt">$</span> aida doctor
+                            <span class="prompt">$</span> evidtrail doctor
                         </div>
                         <div class="terminal-line output">
                             ✓ clone depth &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; full history
@@ -164,7 +169,7 @@
                             Ready: every check passed.
                         </div>
                         <div class="terminal-line">
-                            <span class="prompt">$</span> aida --since 90d
+                            <span class="prompt">$</span> evidtrail --since 90d
                         </div>
                         <div class="terminal-line output">
                             Collected 77 commits · coverage 100.0% (agent 52, automated 25, unknown 0)
@@ -173,7 +178,7 @@
                             Trend: fewer than two mature periods (30d window) — no comparison yet
                         </div>
                         <div class="terminal-line output">
-                            Reports written to ./aida-output/
+                            Reports written to ./evidtrail-output/
                         </div>
                     </div>
                 </div>
@@ -203,12 +208,12 @@
                     <div class="feature-card">
                         <div class="feature-icon">🎯</div>
                         <h3>Declared provenance</h3>
-                        <p>The commit hook stamps a mode when <code>AIDA_MODE</code>, a supported agent environment, or a team-configured default determines it. When AIDA cannot know, it writes nothing — <code>unknown</code> remains honest.</p>
+                        <p>The commit hook stamps a mode when <code>EVIDTRAIL_MODE</code>, a supported agent environment, or a team-configured default determines it. When evidtrail cannot know, it writes nothing — <code>unknown</code> remains honest.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">💬</div>
                         <h3>PR Comments</h3>
-                        <p>Post AIDA reports directly on pull requests and merge requests. GitHub Actions and GitLab CI are supported; comments are explicit network operations that require a token.</p>
+                        <p>Post evidtrail reports directly on pull requests and merge requests. GitHub Actions and GitLab CI are supported; comments are explicit network operations that require a token.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">🚀</div>
@@ -227,7 +232,7 @@
                         <div class="step-number">1</div>
                         <div class="step-content">
                             <h3>Install globally</h3>
-                            <code>npm install -g @aida-dev/cli</code>
+                            <code>npm install -g @evidtrail/cli</code>
                         </div>
                     </div>
                     <div class="step">
@@ -241,7 +246,7 @@
                         <div class="step-number">3</div>
                         <div class="step-content">
                             <h3>Run analysis</h3>
-                            <code>aida collect --since 30d && aida analyze && aida report</code>
+                            <code>evidtrail collect --since 30d && evidtrail analyze && evidtrail report</code>
                         </div>
                     </div>
                 </div>
@@ -260,7 +265,7 @@
                     <div class="tool-badge">Windsurf</div>
                     <div class="tool-badge">Gemini</div>
                     <div class="tool-badge">Codeium</div>
-                    <div class="tool-badge">+ Custom tools via .aida.json</div>
+                    <div class="tool-badge">+ Custom tools via .evidtrail.json</div>
                 </div>
             </div>
         </section>
@@ -268,7 +273,7 @@
         <section id="ci" class="ci-integration">
             <div class="container">
                 <h2>CI/CD Integration</h2>
-                <p class="section-subtitle">One step in your workflow. The action runs <code>aida doctor</code> first, so a shallow checkout is refused before it can produce a confidently wrong report.</p>
+                <p class="section-subtitle">One step in your workflow. The action runs <code>evidtrail doctor</code> first, so a shallow checkout is refused before it can produce a confidently wrong report.</p>
                 <div class="ci-example">
                     <div class="terminal">
                         <div class="terminal-header">
@@ -277,30 +282,30 @@
                                 <span class="control yellow"></span>
                                 <span class="control green"></span>
                             </div>
-                            <span class="terminal-title">.github/workflows/aida.yml</span>
+                            <span class="terminal-title">.github/workflows/evidtrail.yml</span>
                         </div>
                         <div class="terminal-body">
-                            <div class="terminal-line"><span class="yaml-key">name:</span> AIDA Analysis</div>
+                            <div class="terminal-line"><span class="yaml-key">name:</span> evidtrail Analysis</div>
                             <div class="terminal-line"><span class="yaml-key">on:</span> [pull_request]</div>
                             <div class="terminal-line"><span class="yaml-key">permissions:</span></div>
                             <div class="terminal-line">&nbsp; <span class="yaml-key">contents:</span> read</div>
                             <div class="terminal-line">&nbsp; <span class="yaml-key">pull-requests:</span> write</div>
                             <div class="terminal-line">&nbsp;</div>
                             <div class="terminal-line"><span class="yaml-key">jobs:</span></div>
-                            <div class="terminal-line">&nbsp; <span class="yaml-key">aida:</span></div>
+                            <div class="terminal-line">&nbsp; <span class="yaml-key">evidtrail:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; <span class="yaml-key">runs-on:</span> ubuntu-latest</div>
                             <div class="terminal-line">&nbsp; &nbsp; <span class="yaml-key">steps:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> actions/checkout@v5</div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">with:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">fetch-depth:</span> 0</div>
-                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> ceccode/AIDA-Metrics@v1</div>
+                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> ceccode/evidtrail@v1</div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">with:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">comment:</span> true</div>
                         </div>
                     </div>
                 </div>
                 <figure class="pr-comment">
-                    <img src="pr-comment.png" alt="AIDA PR comment on GitHub: one verdict line, every commit in this change set carries provenance, with a collapsed Details fold" width="800" height="132" loading="lazy">
+                    <img src="pr-comment.png" alt="evidtrail PR comment on GitHub: one verdict line, every commit in this change set carries provenance, with a collapsed Details fold" width="800" height="132" loading="lazy">
                     <figcaption>What lands on the pull request when every commit carries provenance: one line, details folded. When commits lack provenance the line turns to ⚠️ and names them, with the one-line repair.</figcaption>
                 </figure>
             </div>
@@ -308,11 +313,11 @@
 
         <section id="faq" class="faq">
             <div class="container">
-                <h2>What AIDA is — and is not</h2>
-                <p class="faq-lead">AIDA does <strong>not</strong> infer productivity, defects, deployment, causality, capitalization, or developer performance from git history. It records what git can actually establish, with the limits kept visible.</p>
+                <h2>What evidtrail is — and is not</h2>
+                <p class="faq-lead">evidtrail does <strong>not</strong> infer productivity, defects, deployment, causality, capitalization, or developer performance from git history. It records what git can actually establish, with the limits kept visible.</p>
                 <dl class="faq-list">
-                    <dt>Does AIDA measure developer productivity or the ROI of AI coding tools?</dt>
-                    <dd>No. It records <em>provenance</em> — who or what wrote a commit, and how that is known — and <em>change signals</em> — how often files are touched again within a fixed horizon. Nothing in git history can establish productivity or value, so AIDA does not claim it.</dd>
+                    <dt>Does evidtrail measure developer productivity or the ROI of AI coding tools?</dt>
+                    <dd>No. It records <em>provenance</em> — who or what wrote a commit, and how that is known — and <em>change signals</em> — how often files are touched again within a fixed horizon. Nothing in git history can establish productivity or value, so evidtrail does not claim it.</dd>
                     <dt>How does it know a commit came from an AI agent, without anyone labelling commits?</dt>
                     <dd>A <code>prepare-commit-msg</code> hook, installed once per clone or automatically through a <code>package.json</code> <code>prepare</code> script, detects agent sessions (Claude Code, Cursor) from their environment and stamps an <code>AI-Mode</code> trailer. Tool co-author trailers are read as well. A commit with no signal stays <code>unknown</code> — it is never assumed to be human.</dd>
                     <dt>Why does it sometimes refuse to show a comparison?</dt>
@@ -321,6 +326,8 @@
                     <dd>A period that ended yesterday has had one day to be reworked; one from last year has had a year. Compared raw, every report would find quality declining. Every period is measured through the same observation window, and only periods that have been over for the full window are compared.</dd>
                     <dt>Does it send code or commit data anywhere?</dt>
                     <dd>Collection, analysis and reporting are local and offline. Two commands use the network, both opt-in: <code>fetch-prs</code> reads pull request outcomes from the forge API, <code>comment</code> posts the report to a PR. Author identities can be redacted.</dd>
+                    <dt>Wasn't this called AIDA Metrics?</dt>
+                    <dd>Yes, until 1.1. The name collided with the marketing funnel and an opera, and its expansion — "AI Development Accounting" — promised the cost-and-value reading the tool refuses to make. Same tool, same numbers: <code>@aida-dev/*</code>, <code>.aida.json</code>, <code>AIDA_MODE</code> and the <code>aida</code> command keep working for one release and point at their new names.</dd>
                 </dl>
             </div>
         </section>
@@ -330,10 +337,10 @@
                 <h2>Ready to make AI evidence auditable?</h2>
                 <p>Start with the repository signals Git can support — and keep their limits visible.</p>
                 <div class="cta-actions">
-                    <a href="https://github.com/ceccode/AIDA-Metrics" class="btn btn-primary">
+                    <a href="https://github.com/ceccode/evidtrail" class="btn btn-primary">
                         Get Started
                     </a>
-                    <a href="https://github.com/ceccode/AIDA-Metrics#contributing" class="btn btn-secondary">
+                    <a href="https://github.com/ceccode/evidtrail#contributing" class="btn btn-secondary">
                         Contribute
                     </a>
                 </div>
@@ -345,21 +352,21 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-brand">
-                    <h3><span class="brand-aida">AIDA</span></h3>
-                    <p>AI Development Accounting</p>
+                    <h3><span class="brand-evidtrail">evidtrail</span></h3>
+                    <p>formerly AIDA Metrics</p>
                 </div>
                 <div class="footer-links">
                     <div class="footer-section">
                         <h4>Project</h4>
-                        <a href="https://github.com/ceccode/AIDA-Metrics">GitHub</a>
-                        <a href="https://github.com/ceccode/AIDA-Metrics/issues">Issues</a>
-                        <a href="https://github.com/ceccode/AIDA-Metrics/blob/main/CODE_OF_CONDUCT.md">Code of Conduct</a>
+                        <a href="https://github.com/ceccode/evidtrail">GitHub</a>
+                        <a href="https://github.com/ceccode/evidtrail/issues">Issues</a>
+                        <a href="https://github.com/ceccode/evidtrail/blob/main/CODE_OF_CONDUCT.md">Code of Conduct</a>
                     </div>
                     <div class="footer-section">
                         <h4>Resources</h4>
-                        <a href="https://github.com/ceccode/AIDA-Metrics#readme">Documentation</a>
-                        <a href="https://www.npmjs.com/package/@aida-dev/cli">NPM Package</a>
-                        <a href="https://github.com/ceccode/AIDA-Metrics/blob/main/LICENSE">MIT License</a>
+                        <a href="https://github.com/ceccode/evidtrail#readme">Documentation</a>
+                        <a href="https://www.npmjs.com/package/@evidtrail/cli">NPM Package</a>
+                        <a href="https://github.com/ceccode/evidtrail/blob/main/LICENSE">MIT License</a>
                     </div>
                 </div>
             </div>

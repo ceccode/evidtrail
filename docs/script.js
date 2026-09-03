@@ -1,6 +1,6 @@
 // Copy install command functionality
 function copyInstallCommand() {
-    const command = 'npm install -g @aida-dev/cli';
+    const command = 'npm install -g @evidtrail/cli';
     
     if (navigator.clipboard && window.isSecureContext) {
         // Use modern clipboard API

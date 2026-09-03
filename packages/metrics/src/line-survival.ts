@@ -1,4 +1,4 @@
-import { BlameStream, Commit, CommitStream } from '@aida-dev/core';
+import { BlameStream, Commit, CommitStream } from '@evidtrail/core';
 import { LineSurvival } from './schema/metrics.js';
 
 // Line-level survival (#23). Joins blame output (sha → surviving lines) with
@@ -16,7 +16,7 @@ import { LineSurvival } from './schema/metrics.js';
 // visited. It has to be: blame never covers the whole tree (generated files
 // are excluded, --max-files caps the walk), so counting additions across
 // every file divides a fraction of the repo by all of it. Found by running
-// AIDA against babel, where `--max-files 500` out of 27,648 files reported
+// evidtrail against babel, where `--max-files 500` out of 27,648 files reported
 // "1.7% of AI lines survive" — 453 files' worth of survivors over the whole
 // history's worth of additions. The number was arithmetically correct and
 // told the reader something false.

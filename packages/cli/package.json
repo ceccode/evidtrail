@@ -1,5 +1,5 @@
 {
-  "name": "@aida-dev/cli",
+  "name": "@evidtrail/cli",
   "version": "1.1.0",
   "description": "Auditable AI provenance and change signals from git — CLI and GitHub Action. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
   "type": "module",
@@ -10,6 +10,7 @@
     "dist"
   ],
   "bin": {
+    "evidtrail": "dist/index.js",
     "aida": "dist/index.js"
   },
   "keywords": [
@@ -28,14 +29,14 @@
   ],
   "author": "Francesco Falanga <falanga.fra@gmail.com>",
   "license": "MIT",
-  "homepage": "https://ceccode.github.io/AIDA-Metrics/",
+  "homepage": "https://ceccode.github.io/evidtrail/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ceccode/AIDA-Metrics.git",
+    "url": "https://github.com/ceccode/evidtrail.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/ceccode/AIDA-Metrics/issues"
+    "url": "https://github.com/ceccode/evidtrail/issues"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -54,8 +55,8 @@
   "dependencies": {
     "commander": "^11.1.0",
     "zod": "^3.22.4",
-    "@aida-dev/core": "workspace:*",
-    "@aida-dev/metrics": "workspace:*"
+    "@evidtrail/core": "workspace:*",
+    "@evidtrail/metrics": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

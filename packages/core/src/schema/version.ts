@@ -34,7 +34,7 @@ export class SchemaVersionError extends Error {
     const foundLabel =
       typeof found === 'number' ? `schema v${found}` : 'no schemaVersion field (pre-v1 output)';
     super(
-      `${filePath} has ${foundLabel}, but this version of AIDA reads schema v${expected}. ${remedy}`
+      `${filePath} has ${foundLabel}, but this version of evidtrail reads schema v${expected}. ${remedy}`
     );
     this.name = 'SchemaVersionError';
   }

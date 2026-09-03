@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Security fixes are released for the latest published version of AIDA. Before
+Security fixes are released for the latest published version of evidtrail. Before
 reporting, please reproduce the issue on that version when it is safe to do so.
 
 ## Reporting a vulnerability
@@ -13,7 +13,7 @@ put users, repositories, tokens, or CI environments at risk.
 
 Include, where possible:
 
-- the affected command and AIDA version;
+- the affected command and evidtrail version;
 - the operating system and Node.js version;
 - a minimal reproduction using non-sensitive data;
 - the expected impact and any known mitigations.
@@ -23,7 +23,7 @@ while it is investigated, and coordinate disclosure after a fix is available.
 
 ## Scope
 
-AIDA executes Git commands against repositories supplied by its users and can
+evidtrail executes Git commands against repositories supplied by its users and can
 optionally call forge APIs. Repository contents, Git metadata, configuration,
 file names, API responses, and generated artifacts are treated as untrusted
 input. Reports about command execution, credential exposure, path handling,

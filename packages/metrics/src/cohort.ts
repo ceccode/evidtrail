@@ -1,4 +1,4 @@
-import { Commit, daysBetween } from '@aida-dev/core';
+import { Commit, daysBetween } from '@evidtrail/core';
 import { AgeStats, CategoryCounts, FileCategory } from './schema/metrics.js';
 
 // Cohort age (#29): persistence comparisons between cohorts of different

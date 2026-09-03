@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Commit, CommitStream } from '@aida-dev/core';
+import { Commit, CommitStream } from '@evidtrail/core';
 import { calculateOutcomeCorrelation } from './outcome-correlation.js';
 
 function makeCommit(overrides: Partial<Commit> & { hash: string }): Commit {

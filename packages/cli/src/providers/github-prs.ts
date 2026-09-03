@@ -7,9 +7,9 @@ import {
   PRStream,
   PullRequest,
   createAITagger,
-} from '@aida-dev/core';
+} from '@evidtrail/core';
 
-// GitHub PR fetcher for `aida fetch-prs` (#51).
+// GitHub PR fetcher for `evidtrail fetch-prs` (#51).
 //
 // Deliberately isolated in an opt-in command: `collect` stays git-only and
 // offline. Nothing about the PR author is read

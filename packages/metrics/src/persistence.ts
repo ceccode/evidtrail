@@ -1,4 +1,4 @@
-import { Commit, CommitStream } from '@aida-dev/core';
+import { Commit, CommitStream } from '@evidtrail/core';
 import { categorizeFile } from './cohort.js';
 import { FileCategory, Persistence } from './schema/metrics.js';
 

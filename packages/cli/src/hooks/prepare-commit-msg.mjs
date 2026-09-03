@@ -1,20 +1,25 @@
 // Canonical hook body shared by the published CLI and this repository's
 // pre-build installer. Keep this module free of TypeScript syntax: a fresh
 // clone must be able to import it before the CLI has been compiled.
-export const HOOK_MARKER = '# >>> aida-metrics mode stamp >>>';
-export const HOOK_END_MARKER = '# <<< aida-metrics mode stamp <<<';
+export const HOOK_MARKER = '# >>> evidtrail mode stamp >>>';
+export const HOOK_END_MARKER = '# <<< evidtrail mode stamp <<<';
+
+// Hooks written before the rename carry these markers. They are still ours:
+// an installer must recognise and upgrade them, never refuse them as foreign.
+export const LEGACY_HOOK_MARKER = '# >>> aida-metrics mode stamp >>>';
+export const LEGACY_HOOK_END_MARKER = '# <<< aida-metrics mode stamp <<<';
 
 // Auto-detection is a convenience for known agent environments, not a
-// guarantee. AIDA_MODE always wins; when nothing is known we write nothing,
+// guarantee. EVIDTRAIL_MODE always wins; when nothing is known we write nothing,
 // because an absent trailer honestly means "unknown" while a guessed one
 // would be a fabricated declaration.
 export const HOOK_SCRIPT = `#!/bin/sh
 ${HOOK_MARKER}
 # Stamps 'AI-Mode: <mode>' so commit provenance is declared, not inferred.
-# Docs: https://github.com/ceccode/AIDA-Metrics/issues/61
-# Remove with: aida install-hooks --uninstall
+# Docs: https://github.com/ceccode/evidtrail/issues/61
+# Remove with: evidtrail install-hooks --uninstall
 
-aida_stamp_mode() {
+evidtrail_stamp_mode() {
   msg_file="$1"
   [ -f "$msg_file" ] || return 0
 
@@ -24,7 +29,8 @@ aida_stamp_mode() {
     return 0
   fi
 
-  mode="$AIDA_MODE"
+  # AIDA_MODE is the pre-rename name, honoured for one release.
+  mode="\${EVIDTRAIL_MODE:-$AIDA_MODE}"
 
   # Best-effort detection of known agent environments
   if [ -z "$mode" ]; then
@@ -35,9 +41,15 @@ aida_stamp_mode() {
     fi
   fi
 
-  # Repo-wide default, opt-in via .aida.json { "defaultMode": "..." }
-  if [ -z "$mode" ] && [ -f .aida.json ]; then
-    mode=$(sed -n 's/.*"defaultMode"[[:space:]]*:[[:space:]]*"\\([a-z]*\\)".*/\\1/p' .aida.json | head -n 1)
+  # Repo-wide default, opt-in via .evidtrail.json { "defaultMode": "..." }.
+  # .aida.json is the pre-rename file name, read for one release.
+  if [ -z "$mode" ]; then
+    for cfg in .evidtrail.json .aida.json; do
+      if [ -f "$cfg" ]; then
+        mode=$(sed -n 's/.*"defaultMode"[[:space:]]*:[[:space:]]*"\\([a-z]*\\)".*/\\1/p' "$cfg" | head -n 1)
+        break
+      fi
+    done
   fi
 
   case "$mode" in
@@ -50,6 +62,6 @@ aida_stamp_mode() {
   printf '\\nAI-Mode: %s\\n' "$mode" >> "$msg_file"
 }
 
-aida_stamp_mode "$1" 2>/dev/null || true
+evidtrail_stamp_mode "$1" 2>/dev/null || true
 ${HOOK_END_MARKER}
 `;

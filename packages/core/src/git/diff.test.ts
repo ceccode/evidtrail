@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { getDiffStats } from './diff.js';
 import path from 'path';
 
-// These tests run against the actual AIDA repo
+// These tests run against the actual evidtrail repo
 const REPO_PATH = path.resolve(__dirname, '..', '..', '..', '..');
 
 describe('getDiffStats', () => {

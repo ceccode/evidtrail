@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { createLogger, describeError } from '@aida-dev/core';
+import { createLogger, describeError } from '@evidtrail/core';
 import { isGitRepository } from '../hooks/detect.js';
 import { installAidaHook, uninstallAidaHook } from '../hooks/install.js';
 
@@ -10,7 +10,7 @@ export function createInstallHooksCommand(): Command {
     )
     .option('--repo <path>', 'Repository path', process.cwd())
     .option('--force', 'Overwrite an existing unrelated hook', false)
-    .option('--uninstall', 'Remove the AIDA hook block', false)
+    .option('--uninstall', 'Remove the evidtrail hook block', false)
     .option(
       '--if-git',
       'Exit quietly when there is no git repository (for use in a package.json prepare script)',
@@ -32,16 +32,16 @@ export function createInstallHooksCommand(): Command {
 
         if (options.uninstall) {
           const result = await uninstallAidaHook(options.repo);
-          if (result.status === 'absent') logger.info('No AIDA hook found: nothing to uninstall.');
+          if (result.status === 'absent') logger.info('No evidtrail hook found: nothing to uninstall.');
           else if (result.status === 'removed') logger.info(`Removed ${result.hookPath}`);
-          else logger.info(`Removed the AIDA block from ${result.hookPath}, leaving the rest intact`);
+          else logger.info(`Removed the evidtrail block from ${result.hookPath}, leaving the rest intact`);
           return;
         }
 
         const result = await installAidaHook(options.repo, { force: Boolean(options.force) });
         if (result.status === 'refused') {
           logger.error(
-            `${result.hookPath} already exists and was not written by AIDA.\n` +
+            `${result.hookPath} already exists and was not written by evidtrail.\n` +
               "Refusing to overwrite someone else's hook. Re-run with --force to replace it, " +
               'or add the AI-Mode trailer from your own hook.'
           );
@@ -55,7 +55,7 @@ export function createInstallHooksCommand(): Command {
         );
         logger.info(
           'Commits will now carry an `AI-Mode:` trailer when the mode is known ' +
-            '(AIDA_MODE env var, a detected agent environment, or defaultMode in .aida.json).'
+            '(EVIDTRAIL_MODE env var, a detected agent environment, or defaultMode in .evidtrail.json).'
         );
       } catch (error) {
         logger.error(`Hook installation failed: ${describeError(error)}`);

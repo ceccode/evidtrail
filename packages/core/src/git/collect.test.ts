@@ -27,7 +27,7 @@ function commit(message: string) {
 }
 
 beforeAll(() => {
-  repoPath = mkdtempSync(join(tmpdir(), 'aida-collect-test-'));
+  repoPath = mkdtempSync(join(tmpdir(), 'evidtrail-collect-test-'));
   run('git init -q -b main');
   run('git config user.name test && git config user.email test@example.com');
 
@@ -122,7 +122,7 @@ describe('collectCommits with attribution manifest', () => {
   }
 
   beforeAll(() => {
-    manifestRepoPath = mkdtempSync(join(tmpdir(), 'aida-manifest-collect-'));
+    manifestRepoPath = mkdtempSync(join(tmpdir(), 'evidtrail-manifest-collect-'));
     execSync('git init -q -b main', { cwd: manifestRepoPath });
     runIn('git config user.name test && git config user.email test@example.com');
   });
@@ -140,7 +140,7 @@ describe('collectCommits with attribution manifest', () => {
     const plainCommit = commitIn('docs: not in manifest');
 
     writeFileSync(
-      join(manifestRepoPath, 'aida-attribution.json'),
+      join(manifestRepoPath, 'evidtrail-attribution.json'),
       JSON.stringify({
         version: '1.0',
         ai_assisted_commits: [{ hash: untaggedAI }],
@@ -202,7 +202,7 @@ describe('collectCommits with attribution manifest', () => {
       return execSync('git rev-parse HEAD', { cwd: manifestRepoPath }).toString().trim();
     })();
 
-    rmSync(join(manifestRepoPath, 'aida-attribution.json'), { force: true });
+    rmSync(join(manifestRepoPath, 'evidtrail-attribution.json'), { force: true });
     const stream = await collectCommits({ repoPath: manifestRepoPath });
     const byHash = Object.fromEntries(stream.commits.map((c) => [c.hash, c.tags]));
 
@@ -213,7 +213,7 @@ describe('collectCommits with attribution manifest', () => {
   });
 
   it('does not fail collect when the manifest is invalid', async () => {
-    writeFileSync(join(manifestRepoPath, 'aida-attribution.json'), '{ broken');
+    writeFileSync(join(manifestRepoPath, 'evidtrail-attribution.json'), '{ broken');
     const stream = await collectCommits({ repoPath: manifestRepoPath });
     expect(stream.commits.length).toBeGreaterThan(0);
     expect(stream.commits.every((c) => !c.tags.sources.includes('manifest'))).toBe(true);
@@ -252,7 +252,7 @@ describe('collectCommits synthetic PR merge (#40)', () => {
   let realCommit: string;
 
   beforeAll(() => {
-    prRepoPath = mkdtempSync(join(tmpdir(), 'aida-pr-merge-'));
+    prRepoPath = mkdtempSync(join(tmpdir(), 'evidtrail-pr-merge-'));
     const runHere = (cmd: string) => execSync(cmd, { cwd: prRepoPath });
     runHere('git init -q -b main');
     runHere('git config user.name test && git config user.email test@example.com');
@@ -296,7 +296,7 @@ describe('collectCommits synthetic PR merge (#40)', () => {
 
 describe('collectCommits revert detection (#26)', () => {
   it('parses the target sha from a real git revert commit', async () => {
-    const repoPath = mkdtempSync(join(tmpdir(), 'aida-revert-'));
+    const repoPath = mkdtempSync(join(tmpdir(), 'evidtrail-revert-'));
     try {
       execSync('git init -q -b main', { cwd: repoPath });
       execSync('git config user.name test && git config user.email test@example.com', { cwd: repoPath });
@@ -325,7 +325,7 @@ describe('collectCommits revert detection (#26)', () => {
 
 describe('collectCommits on degenerate repositories', () => {
   it('returns an empty stream instead of crashing on a repo with no commits', async () => {
-    const emptyPath = mkdtempSync(join(tmpdir(), 'aida-empty-'));
+    const emptyPath = mkdtempSync(join(tmpdir(), 'evidtrail-empty-'));
     try {
       execSync('git init -q -b main', { cwd: emptyPath });
 
@@ -339,8 +339,8 @@ describe('collectCommits on degenerate repositories', () => {
   });
 
   it('warns loudly on a shallow clone, whose truncated history would silently skew every metric', async () => {
-    const originPath = mkdtempSync(join(tmpdir(), 'aida-origin-'));
-    const shallowPath = mkdtempSync(join(tmpdir(), 'aida-shallow-'));
+    const originPath = mkdtempSync(join(tmpdir(), 'evidtrail-origin-'));
+    const shallowPath = mkdtempSync(join(tmpdir(), 'evidtrail-shallow-'));
     rmSync(shallowPath, { recursive: true, force: true }); // git clone wants a fresh path
     const warnings: string[] = [];
     const logger = {
@@ -385,7 +385,7 @@ describe('collectCommits on degenerate repositories', () => {
 
 describe('collectCommits scope contract', () => {
   it('keeps unreachable branch work out of the default report', async () => {
-    const scopedRepo = mkdtempSync(join(tmpdir(), 'aida-scope-'));
+    const scopedRepo = mkdtempSync(join(tmpdir(), 'evidtrail-scope-'));
     const runHere = (cmd: string) => execSync(cmd, { cwd: scopedRepo });
     try {
       runHere('git init -q -b main');
@@ -413,8 +413,8 @@ describe('collectCommits scope contract', () => {
     // been fast-forwarded. Reading that stale ref makes a default-branch
     // report look complete while omitting the latest integrated commit. The
     // future timestamp models harmless clock skew between the forge and the
-    // machine running AIDA: no explicit --until means include reachable HEAD.
-    const scopedRepo = mkdtempSync(join(tmpdir(), 'aida-origin-default-'));
+    // machine running evidtrail: no explicit --until means include reachable HEAD.
+    const scopedRepo = mkdtempSync(join(tmpdir(), 'evidtrail-origin-default-'));
     const runHere = (cmd: string, env: Record<string, string> = {}) =>
       execSync(cmd, { cwd: scopedRepo, env: { ...process.env, ...env } });
     try {

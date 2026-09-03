@@ -1,7 +1,7 @@
 {
-  "name": "@aida-dev/core",
+  "name": "@evidtrail/core",
   "version": "1.0.2",
-  "description": "Git collection, two-axis AI attribution (mode × evidence), and versioned schemas for AIDA. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
+  "description": "Git collection, two-axis AI attribution (mode × evidence), and versioned schemas for evidtrail. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -24,14 +24,14 @@
   ],
   "author": "Francesco Falanga <falanga.fra@gmail.com>",
   "license": "MIT",
-  "homepage": "https://ceccode.github.io/AIDA-Metrics/",
+  "homepage": "https://ceccode.github.io/evidtrail/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ceccode/AIDA-Metrics.git",
+    "url": "https://github.com/ceccode/evidtrail.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/ceccode/AIDA-Metrics/issues"
+    "url": "https://github.com/ceccode/evidtrail/issues"
   },
   "scripts": {
     "build": "tsup src/index.ts --dts",

@@ -1,10 +1,14 @@
-// Installs AIDA's own commit hook on `pnpm install`, before the CLI exists.
+// Installs evidtrail's own commit hook on `pnpm install`, before the CLI exists.
 // This repository dogfoods the exact hook body shipped by the CLI; the small
 // bootstrap below only resolves Git's hook directory and writes that body.
 import { spawnSync } from 'child_process';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { isAbsolute, resolve } from 'path';
-import { HOOK_MARKER, HOOK_SCRIPT } from '../packages/cli/src/hooks/prepare-commit-msg.mjs';
+import {
+  HOOK_MARKER,
+  HOOK_SCRIPT,
+  LEGACY_HOOK_MARKER,
+} from '../packages/cli/src/hooks/prepare-commit-msg.mjs';
 
 function gitPath(args) {
   const result = spawnSync('git', args, { encoding: 'utf8' });
@@ -25,17 +29,18 @@ try {
 
   // `prepare` must never overwrite another tool's hook. The published CLI
   // offers --force for an explicit choice; an install lifecycle does not.
-  if (existing && !existing.includes(HOOK_MARKER)) {
-    console.warn(`[aida] ${hookPath} belongs to another tool — hook installation skipped.`);
+  // A pre-rename hook carries the legacy marker: still ours, upgraded in place.
+  if (existing && !existing.includes(HOOK_MARKER) && !existing.includes(LEGACY_HOOK_MARKER)) {
+    console.warn(`[evidtrail] ${hookPath} belongs to another tool — hook installation skipped.`);
     process.exit(0);
   }
 
   mkdirSync(hooksDir, { recursive: true });
   writeFileSync(hookPath, HOOK_SCRIPT, { mode: 0o755 });
   chmodSync(hookPath, 0o755);
-  console.log(`[aida] Installed ${hookPath}`);
+  console.log(`[evidtrail] Installed ${hookPath}`);
 } catch (error) {
   // Provenance hygiene must not make dependency installation fail.
   const message = error instanceof Error ? error.message : String(error);
-  console.warn(`[aida] Hook installation skipped: ${message}`);
+  console.warn(`[evidtrail] Hook installation skipped: ${message}`);
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BlameStream, Commit, CommitStream } from '@aida-dev/core';
+import { BlameStream, Commit, CommitStream } from '@evidtrail/core';
 import { calculateLineSurvival } from './line-survival.js';
 
 function makeCommit(hash: string, tags: Partial<Commit['tags']>, additions = 0): Commit {
@@ -115,7 +115,7 @@ describe('calculateLineSurvival', () => {
     expect(result.approxSurvivalRate).toBe(1);
   });
 
-  // Found by running AIDA against babel: `--max-files 500` over 27,648 files
+  // Found by running evidtrail against babel: `--max-files 500` over 27,648 files
   // reported "1.7% of AI lines survive" by dividing survivors found in 453
   // files by additions counted across the entire history.
   it('counts only additions to files blame actually visited', () => {

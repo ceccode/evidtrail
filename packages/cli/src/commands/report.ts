@@ -5,8 +5,8 @@ import {
   METRICS_SCHEMA_VERSION,
   assertSchemaVersion,
   describeError,
-} from '@aida-dev/core';
-import { Metrics } from '@aida-dev/metrics';
+} from '@evidtrail/core';
+import { Metrics } from '@evidtrail/metrics';
 import { join } from 'path';
 import { promises as fs } from 'fs';
 import { CLIConfig } from '../schema/config.js';
@@ -73,8 +73,8 @@ function generatePRMarkdownReport(metrics: Metrics): string {
   // expand. Green when every commit carries provenance; a warning otherwise.
   const verdict =
     a.unknown === 0
-      ? `**AIDA** ✅ ${countLabel(total, 'commit')}${automatedNote} — ${modeSummary || 'no authored commits'} — every commit in this change set carries provenance.`
-      : `**AIDA** ⚠️ ${countLabel(total, 'commit')}${automatedNote} — **${countLabel(a.unknown, 'commit')} without provenance** (${coveragePct}% coverage)${modeSummary ? ` — ${modeSummary}` : ''}.`;
+      ? `**evidtrail** ✅ ${countLabel(total, 'commit')}${automatedNote} — ${modeSummary || 'no authored commits'} — every commit in this change set carries provenance.`
+      : `**evidtrail** ⚠️ ${countLabel(total, 'commit')}${automatedNote} — **${countLabel(a.unknown, 'commit')} without provenance** (${coveragePct}% coverage)${modeSummary ? ` — ${modeSummary}` : ''}.`;
 
   // The exception, in the open: which commits, and the one-line repair. A
   // repository-wide prior never closes this gap, so it is named here when
@@ -92,7 +92,7 @@ function generatePRMarkdownReport(metrics: Metrics): string {
 |---|---|
 ${gapRows}
 ${a.missingEvidence.truncated ? `\n_Only the first ${gaps.length} shown; ${a.unknown - gaps.length} more without evidence._\n` : ''}
-For agent-produced work, declare \`AI-Mode: agent\` — install the hook in your clone with \`aida install-hooks\`, or add \`"prepare": "aida install-hooks --if-git"\` to \`package.json\` so every clone gets it. The reviewer who runs \`git commit\` stays the author; that is separate from how the content was produced.${
+For agent-produced work, declare \`AI-Mode: agent\` — install the hook in your clone with \`evidtrail install-hooks\`, or add \`"prepare": "evidtrail install-hooks --if-git"\` to \`package.json\` so every clone gets it. The reviewer who runs \`git commit\` stays the author; that is separate from how the content was produced.${
           a.defaultMode !== null
             ? `\n\n> \`defaultMode: ${a.defaultMode}\` is configured, but a repository-wide prior is not evidence about an individual commit: these stay \`unknown\` and coverage stays ${coveragePct}%.`
             : ''
@@ -147,7 +147,7 @@ function generateMarkdownReport(metrics: Metrics): string {
   const warnOnRecent = a.recent ? a.recent.belowThreshold : a.belowThreshold;
 
   const coverageWarning = warnOnRecent
-    ? `\n> ⚠️ **Coverage is below ${(a.coverageThreshold * 100).toFixed(0)}%${a.recent ? ` in the last ${a.recent.windowDays} days` : ''}.** The sections from here down depend on attribution evidence and are low-confidence — Repository Change Signals above is unaffected, because it needs no attribution evidence. Install the commit hook (\`aida install-hooks\`) so new commits declare their autonomy mode, or set \`defaultMode\` in \`.aida.json\` for the history that predates it.\n`
+    ? `\n> ⚠️ **Coverage is below ${(a.coverageThreshold * 100).toFixed(0)}%${a.recent ? ` in the last ${a.recent.windowDays} days` : ''}.** The sections from here down depend on attribution evidence and are low-confidence — Repository Change Signals above is unaffected, because it needs no attribution evidence. Install the commit hook (\`evidtrail install-hooks\`) so new commits declare their autonomy mode, or set \`defaultMode\` in \`.evidtrail.json\` for the history that predates it.\n`
     : '';
 
   const priorNote =
@@ -198,8 +198,8 @@ ${
             aiCohortHasEvidence
               ? 'every commit in the baseline cohort was placed there by assumption'
               : 'every commit in the AI cohort was placed there by assumption'
-          }, not by evidence. A measured cohort against an assumed one yields a delta that describes the prior, not the repo. Install the commit hook (\`aida install-hooks\`) so commits declare their own mode — the cohorts stay in \`metrics.json\` meanwhile.`
-        : `**No baseline available** — no commits sit at autonomy level \`none\`, so there is nothing honest to compare against. If the commits with no evidence in this repo were hand-written, set \`"defaultMode": "none"\` in \`.aida.json\`.`
+          }, not by evidence. A measured cohort against an assumed one yields a delta that describes the prior, not the repo. Install the commit hook (\`evidtrail install-hooks\`) so commits declare their own mode — the cohorts stay in \`metrics.json\` meanwhile.`
+        : `**No baseline available** — no commits sit at autonomy level \`none\`, so there is nothing honest to compare against. If the commits with no evidence in this repo were hand-written, set \`"defaultMode": "none"\` in \`.evidtrail.json\`.`
     }
 `;
 
@@ -292,7 +292,7 @@ ${modeRows.join('\n')}
 
 **Withheld** — every autonomy cohort in this repo exists only because of the \`${a.defaultMode}\` prior${gatedModes.length > 0 ? ` (${gatedModes.join(', ')})` : ''}: not one commit carries evidence of the level it was written at, so a table here would be the assumption describing itself. The cohorts are still in \`metrics.json\` for anyone who wants the prior's view.
 
-Install the commit hook (\`aida install-hooks\`) so commits declare their own mode — see Data Quality below.
+Install the commit hook (\`evidtrail install-hooks\`) so commits declare their own mode — see Data Quality below.
 
 `
         : '';
@@ -461,7 +461,7 @@ ${trendSection}
 `
     : '';
 
-  return `# AIDA Report
+  return `# evidtrail Report
 
 **Repo:** ${metrics.repoPath}  
 **Default branch:** ${metrics.defaultBranch}  
@@ -497,7 +497,7 @@ ${metrics.caveats.map((caveat) => `- ${caveat}`).join('\n')}
 export function createReportCommand(): Command {
   return new Command('report')
     .description('Generate report from metrics.json')
-    .option('--out-dir <path>', 'Output directory', './aida-output')
+    .option('--out-dir <path>', 'Output directory', './evidtrail-output')
     .option('--verbose', 'Verbose logging', false)
     .action(async (options) => {
       const config = CLIConfig.parse(options);
@@ -512,7 +512,7 @@ export function createReportCommand(): Command {
           raw,
           METRICS_SCHEMA_VERSION,
           'metrics.json',
-          "Rerun 'aida analyze' with this version of AIDA."
+          "Rerun 'evidtrail analyze' with this version of evidtrail."
         );
         const metrics = Metrics.parse(raw);
 

@@ -1,7 +1,7 @@
 {
-  "name": "@aida-dev/metrics",
+  "name": "@evidtrail/metrics",
   "version": "1.0.3",
-  "description": "Deterministic rapid-retouch, trend, cohort, and outcome metrics for AIDA. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
+  "description": "Deterministic rapid-retouch, trend, cohort, and outcome metrics for evidtrail. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "zod": "^3.22.4",
-    "@aida-dev/core": "workspace:*"
+    "@evidtrail/core": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
@@ -44,14 +44,14 @@
   ],
   "author": "Francesco Falanga <falanga.fra@gmail.com>",
   "license": "MIT",
-  "homepage": "https://ceccode.github.io/AIDA-Metrics/",
+  "homepage": "https://ceccode.github.io/evidtrail/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ceccode/AIDA-Metrics.git",
+    "url": "https://github.com/ceccode/evidtrail.git",
     "directory": "packages/metrics"
   },
   "bugs": {
-    "url": "https://github.com/ceccode/AIDA-Metrics/issues"
+    "url": "https://github.com/ceccode/evidtrail/issues"
   },
   "engines": {
     "node": ">=22.0.0"

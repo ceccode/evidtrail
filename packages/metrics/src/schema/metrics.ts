@@ -270,7 +270,7 @@ export const ModeStats = z.object({
   // How many of `commits` are here only because of the `defaultMode` prior
   // (#25). Without this the per-level table and the observed-counts table
   // report different numbers for the same cohort with nothing to explain
-  // the gap — found running AIDA against varano-239, where the header said
+  // the gap — found running evidtrail against varano-239, where the header said
   // `agent 5` and this table said `agent 16`.
   assumed: z.number().int().nonnegative(),
   persistence: Persistence,
@@ -443,12 +443,12 @@ export const Metrics = z.object({
   // Reverts and hotfixes linked to the commit(s) they respond to (#26).
   // Always present — a property of the repo, not a cohort comparison.
   outcomeCorrelation: OutcomeCorrelation,
-  // Null unless `aida fetch-prs` produced a pr-stream.json (#51)
+  // Null unless `evidtrail fetch-prs` produced a pr-stream.json (#51)
   prAcceptance: PRAcceptance.nullable(),
-  // Null unless `aida blame` produced a blame-stream.json (#23)
+  // Null unless `evidtrail blame` produced a blame-stream.json (#23)
   lineSurvival: LineSurvival.nullable(),
   // Null when no commit sits at autonomy level 'none' and no defaultMode prior
-  // assigns the unknowns: AIDA does not invent a comparison cohort.
+  // assigns the unknowns: evidtrail does not invent a comparison cohort.
   baseline: Baseline.nullable(),
   delta: Delta.nullable(),
   caveats: z.array(z.string()),

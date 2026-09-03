@@ -1,4 +1,4 @@
-import { PRStream, PullRequest } from '@aida-dev/core';
+import { PRStream, PullRequest } from '@evidtrail/core';
 import { AcceptanceStats, PRAcceptance } from './schema/metrics.js';
 
 // PR acceptance (#51): the successor to merge ratio. Unlike git history, a

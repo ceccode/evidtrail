@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Commit, CommitStream } from '@aida-dev/core';
+import { Commit, CommitStream } from '@evidtrail/core';
 import { calculateTrend } from './trend.js';
 
 const NOW = new Date('2026-07-15T00:00:00.000Z');

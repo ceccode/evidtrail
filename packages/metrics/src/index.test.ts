@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { calculateMetrics } from './index.js';
-import { Commit, CommitStream } from '@aida-dev/core';
+import { Commit, CommitStream } from '@evidtrail/core';
 
 function makeCommit(overrides: Partial<Commit> & { hash: string }): Commit {
   const commit: Commit = {
@@ -556,7 +556,7 @@ describe('automated commits stay off the autonomy axis (#25/#39)', () => {
 });
 
 describe('per-mode cohorts separate observed from assumed (#25)', () => {
-  // Found running AIDA against varano-239: one report said `agent 5` in the
+  // Found running evidtrail against varano-239: one report said `agent 5` in the
   // observed table and `agent 16` in the per-level table. Both were correct
   // under their own definition, neither said which definition it used, and
   // the reader takes the bigger number for the real one.

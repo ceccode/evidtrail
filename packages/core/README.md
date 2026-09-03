@@ -1,6 +1,6 @@
-# @aida-dev/core
+# @evidtrail/core
 
-Core Git collection, attribution, and versioned schemas for AIDA metrics.
+Core Git collection, attribution, and versioned schemas for evidtrail metrics.
 
 ## Features
 
@@ -12,7 +12,7 @@ Core Git collection, attribution, and versioned schemas for AIDA metrics.
 ## Usage
 
 ```typescript
-import { collectCommits, createLogger } from '@aida-dev/core';
+import { collectCommits, createLogger } from '@evidtrail/core';
 
 const commitStream = await collectCommits({
   repoPath: '/path/to/repo',

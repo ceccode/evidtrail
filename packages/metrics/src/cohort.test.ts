@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateAgeStats, calculateCategoryCounts, categorizeFile } from './cohort.js';
-import { Commit } from '@aida-dev/core';
+import { Commit } from '@evidtrail/core';
 
 function makeCommit(authorDate: string, files: string[] = []): Commit {
   return {
@@ -55,7 +55,7 @@ describe('categorizeFile', () => {
     expect(categorizeFile('db/migrations/001_init.sql')).toBe('migrations');
     expect(categorizeFile('README.md')).toBe('docs');
     expect(categorizeFile('docs/index.html')).toBe('docs');
-    expect(categorizeFile('.aida.json')).toBe('config');
+    expect(categorizeFile('.evidtrail.json')).toBe('config');
     expect(categorizeFile('packages/core/tsconfig.json')).toBe('config');
     expect(categorizeFile('.github/workflows/ci.yml')).toBe('config');
     expect(categorizeFile('pnpm-lock.yaml')).toBe('generated');

@@ -16,7 +16,7 @@
     },
     {
       "hash": "dfa394e3048151d87080e1e2c8bad839e44177cf",
-      "message": "feat: prepare AIDA for NPM publishing"
+      "message": "feat: prepare evidtrail for NPM publishing"
     },
     {
       "hash": "da1d92cf5a7e4dc4adad9169bcca4ea566b4a805",
@@ -28,7 +28,7 @@
     },
     {
       "hash": "884e1f1893e46bf3e71052efd06494c0abb38fe2",
-      "message": "chore: update packages after first @aida-dev release"
+      "message": "chore: update packages after first @evidtrail-dev release"
     },
     {
       "hash": "d12cf05af41f260b644a0b2947ca90e1815d9ff9",
@@ -88,7 +88,7 @@
     },
     {
       "hash": "76311033a4b38febeaadb8fcd00fce58b25d79ac",
-      "message": "ci: run AIDA on PRs with comment, dogfood on own repo"
+      "message": "ci: run evidtrail on PRs with comment, dogfood on own repo"
     },
     {
       "hash": "2e22b88ff23c6dcba925b76269c5eee16ae62dce",
@@ -122,7 +122,7 @@
   "excluded_commits": [
     {
       "hash": "38b8007ef656b27194e90952b6a676068868299b",
-      "message": "feat: initial AIDA metrics implementation with AI-powered analysis"
+      "message": "feat: initial evidtrail metrics implementation with AI-powered analysis"
     },
     {
       "hash": "300d0f153b39b29d5624df6880aa07cedc2ab37a",
@@ -156,7 +156,7 @@
     },
     {
       "hash": "2532f4ff997f64aba73fdb106a97c1f4a826bb5b",
-      "message": "Merge branch 'main' of github.com:ceccode/AIDA-Metrics",
+      "message": "Merge branch 'main' of github.com:ceccode/evidtrail",
       "reason": "Merge commit"
     },
     {
@@ -171,7 +171,7 @@
     },
     {
       "hash": "d59126d50b75ec3904767f1c1da0cc99975ac933",
-      "message": "Merge branch 'main' of github.com:ceccode/AIDA-Metrics",
+      "message": "Merge branch 'main' of github.com:ceccode/evidtrail",
       "reason": "Merge commit"
     },
     {
@@ -186,7 +186,7 @@
     },
     {
       "hash": "55e9e22092243f6f0c99de73c2685f951014a400",
-      "message": "Merge branch 'main' of github.com:ceccode/AIDA-Metrics",
+      "message": "Merge branch 'main' of github.com:ceccode/evidtrail",
       "reason": "Merge commit"
     },
     {
@@ -231,7 +231,7 @@
     },
     {
       "hash": "10ae380d3dca8df548546a21126b1cfc277e22e7",
-      "message": "chore: release @aida-dev/metrics@0.3.0, @aida-dev/cli@0.4.0",
+      "message": "chore: release @evidtrail/metrics@0.3.0, @evidtrail/cli@0.4.0",
       "reason": "Automated by changesets"
     },
     {

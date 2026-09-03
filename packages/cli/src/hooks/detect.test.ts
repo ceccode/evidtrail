@@ -9,7 +9,7 @@ import { HOOK_SCRIPT } from './prepare-commit-msg.js';
 let repoPath: string;
 
 beforeEach(() => {
-  repoPath = mkdtempSync(join(tmpdir(), 'aida-detect-'));
+  repoPath = mkdtempSync(join(tmpdir(), 'evidtrail-detect-'));
   execSync('git init -q -b main', { cwd: repoPath });
 });
 
@@ -23,7 +23,7 @@ describe('isGitRepository', () => {
   });
 
   it('is false where there is no git at all', async () => {
-    const bare = mkdtempSync(join(tmpdir(), 'aida-nogit-'));
+    const bare = mkdtempSync(join(tmpdir(), 'evidtrail-nogit-'));
     try {
       expect(await isGitRepository(bare)).toBe(false);
     } finally {
@@ -33,11 +33,11 @@ describe('isGitRepository', () => {
 });
 
 describe('isAidaHookInstalled', () => {
-  // The distinction #75 turns on: `.aida.json` is committed and shared, the
-  // hook is per-clone. A repo can be set up for AIDA while the clone in
+  // The distinction #75 turns on: `.evidtrail.json` is committed and shared, the
+  // hook is per-clone. A repo can be set up for evidtrail while the clone in
   // front of you declares nothing, and nothing visibly breaks.
-  it('is false on a fresh clone, even one configured for AIDA', async () => {
-    writeFileSync(join(repoPath, '.aida.json'), JSON.stringify({ defaultMode: 'agent' }));
+  it('is false on a fresh clone, even one configured for evidtrail', async () => {
+    writeFileSync(join(repoPath, '.evidtrail.json'), JSON.stringify({ defaultMode: 'agent' }));
     expect(await isAidaHookInstalled(repoPath)).toBe(false);
   });
 
@@ -45,6 +45,19 @@ describe('isAidaHookInstalled', () => {
     const hooks = await resolveHooksDir(repoPath);
     mkdirSync(hooks, { recursive: true });
     writeFileSync(join(hooks, 'prepare-commit-msg'), HOOK_SCRIPT, { mode: 0o755 });
+    expect(await isAidaHookInstalled(repoPath)).toBe(true);
+  });
+
+  it('recognises a hook written before the rename as ours', async () => {
+    // Otherwise every existing clone would read as "no hook" after upgrading,
+    // and install-hooks would refuse to touch its own old hook as foreign.
+    const hooks = await resolveHooksDir(repoPath);
+    mkdirSync(hooks, { recursive: true });
+    writeFileSync(
+      join(hooks, 'prepare-commit-msg'),
+      '#!/bin/sh\n# >>> aida-metrics mode stamp >>>\necho old body\n# <<< aida-metrics mode stamp <<<\n',
+      { mode: 0o755 }
+    );
     expect(await isAidaHookInstalled(repoPath)).toBe(true);
   });
 

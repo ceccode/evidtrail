@@ -1,12 +1,12 @@
-# AIDA Metrics
+# evidtrail
 
 > An auditable ledger of AI provenance and change signals for git repositories — honest about what git can and cannot prove.
 
-AIDA (AI Development Accounting) is an open-source CLI and GitHub Action. It reads git history and produces a versioned `metrics.json` and a Markdown report describing, per commit, the declared or inferred autonomy level of AI participation (`none`, `autocomplete`, `assisted`, `agent`, or `unknown`), how that is known (`declared`, `inferred`, or no evidence), and repository-level change signals: fixed-horizon rapid-retouch rates and their trend over time.
+evidtrail (formerly AIDA Metrics) is an open-source CLI and GitHub Action. It reads git history and produces a versioned `metrics.json` and a Markdown report describing, per commit, the declared or inferred autonomy level of AI participation (`none`, `autocomplete`, `assisted`, `agent`, or `unknown`), how that is known (`declared`, `inferred`, or no evidence), and repository-level change signals: fixed-horizon rapid-retouch rates and their trend over time.
 
-## What AIDA is not
+## What evidtrail is not
 
-AIDA does not infer productivity, defects, deployment, causality, capitalization, or developer performance from git history. It does not estimate the value of software. "Accounting" here means keeping a traceable ledger of evidence, scope, assumptions, and outcomes.
+evidtrail does not infer productivity, defects, deployment, causality, capitalization, or developer performance from git history. It does not estimate the value of software. "Accounting" here means keeping a traceable ledger of evidence, scope, assumptions, and outcomes.
 
 ## How evidence is produced
 
@@ -24,15 +24,15 @@ AIDA does not infer productivity, defects, deployment, causality, capitalization
 
 ## Links
 
-- Repository: https://github.com/ceccode/AIDA-Metrics
-- npm: https://www.npmjs.com/package/@aida-dev/cli
-- README: https://github.com/ceccode/AIDA-Metrics#readme
-- Agent instructions: https://github.com/ceccode/AIDA-Metrics/blob/main/AGENTS.md
-- Security policy: https://github.com/ceccode/AIDA-Metrics/blob/main/SECURITY.md
+- Repository: https://github.com/ceccode/evidtrail
+- npm: https://www.npmjs.com/package/@evidtrail/cli
+- README: https://github.com/ceccode/evidtrail#readme
+- Agent instructions: https://github.com/ceccode/evidtrail/blob/main/AGENTS.md
+- Security policy: https://github.com/ceccode/evidtrail/blob/main/SECURITY.md
 
 ## Commands
 
-- `aida init` — set up config, commit hook, prepare script, CI workflow (additive)
-- `aida doctor` — preflight: clone depth, partial clone, config, hook, CI wiring
-- `aida` — collect → analyze → report
-- `aida collect`, `aida analyze`, `aida report`, `aida blame`, `aida fetch-prs`, `aida comment`, `aida install-hooks`
+- `evidtrail init` — set up config, commit hook, prepare script, CI workflow (additive)
+- `evidtrail doctor` — preflight: clone depth, partial clone, config, hook, CI wiring
+- `evidtrail` — collect → analyze → report
+- `evidtrail collect`, `evidtrail analyze`, `evidtrail report`, `evidtrail blame`, `evidtrail fetch-prs`, `evidtrail comment`, `evidtrail install-hooks`

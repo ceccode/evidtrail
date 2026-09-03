@@ -1,4 +1,4 @@
-import { Commit, CommitStream } from '@aida-dev/core';
+import { Commit, CommitStream } from '@evidtrail/core';
 import { calculatePersistence } from './persistence.js';
 import { Trend, TrendGranularity, TrendPeriod } from './schema/metrics.js';
 
@@ -11,7 +11,7 @@ import { Trend, TrendGranularity, TrendPeriod } from './schema/metrics.js';
 // autonomy, did persistence degrade after switching models.
 //
 // Derived from the commit stream in a single run rather than from stored
-// snapshots: a team gets a trend the first time they run AIDA, instead of
+// snapshots: a team gets a trend the first time they run evidtrail, instead of
 // after months of collecting runs. Comparing archived `metrics.json` files
 // remains possible on top of this and adds only what history cannot
 // reconstruct.

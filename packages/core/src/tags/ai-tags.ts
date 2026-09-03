@@ -28,7 +28,7 @@ export interface AutonomyAxes {
 }
 
 // The whole three-state model, in one function. Everything it reads is on
-// the two primary axes; nothing else in AIDA may decide an attribution.
+// the two primary axes; nothing else in evidtrail may decide an attribution.
 export function projectAttribution({ mode, evidence, automated }: AutonomyAxes): Attribution {
   // Automation is orthogonal to autonomy: known provenance, no author.
   if (automated) return 'automated';
@@ -102,7 +102,7 @@ export const DEFAULT_TOOLS = ['copilot', 'cursor', 'windsurf', 'codeium', 'claud
 // Domains that identify an AI co-author. Deliberately does NOT include
 // `github.com`: `@users.noreply.github.com` is the default email of every
 // GitHub account, so matching it flags ordinary humans who co-authored a
-// commit through the web UI as AI. Found by running AIDA against
+// commit through the web UI as AI. Found by running evidtrail against
 // commander.js, where 2 of 3 "AI" detections were humans. AI bots hosted on
 // GitHub (copilot, copilot-swe-agent) are still caught by the `.*bot.*`
 // trailer rule and by tool-name matching.
@@ -136,7 +136,7 @@ function buildPatterns(tools: string, domains: string) {
       '^X-AI:\\s*true$',
       // A co-author must NAME an AI tool to count as AI evidence. The rule
       // used to be `.*bot.*`, which reads "a bot participated" as "AI wrote
-      // this" — two different claims. Found by running AIDA against babel,
+      // this" — two different claims. Found by running evidtrail against babel,
       // where 47 of 52 "AI" commits were ordinary PRs co-authored by
       // "Babel Bot", the project's own formatting/release bot. Every one of
       // them came out with mode 'unknown': the tagger already knew it could
