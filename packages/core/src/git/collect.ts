@@ -46,7 +46,7 @@ const REVERT_TARGET = /This reverts commit ([0-9a-f]{7,40})/i;
 // arguments to Git. They are data, never options: accepting a leading dash
 // would let an untrusted value alter Git's invocation. This is deliberately
 // narrower than full ref validation because Git still resolves normal branch
-// names and object IDs; AIDA only needs to reject option-shaped input.
+// names and object IDs; evidtrail only needs to reject option-shaped input.
 function assertSafeRefArgument(value: string | undefined, name: string): void {
   if (value?.startsWith('-') || value?.includes('\0')) {
     throw new Error(`Invalid ${name}: Git refs must not start with '-' or contain NUL bytes.`);

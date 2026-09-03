@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { createLogger, describeError } from '@aida-dev/core';
+import { createLogger, describeError } from '@evidtrail/core';
 import { join } from 'path';
 import { promises as fs } from 'fs';
 import { CLIConfig } from '../schema/config.js';
@@ -7,8 +7,8 @@ import { detectProvider } from '../providers/detect.js';
 
 export function createCommentCommand(): Command {
   return new Command('comment')
-    .description('Post AIDA report as a PR/MR comment (auto-detects CI provider)')
-    .option('--out-dir <path>', 'Output directory', './aida-output')
+    .description('Post evidtrail report as a PR/MR comment (auto-detects CI provider)')
+    .option('--out-dir <path>', 'Output directory', './evidtrail-output')
     .option('--verbose', 'Verbose logging', false)
     .option('--dry-run', 'Print comment to stdout instead of posting', false)
     .action(async (options) => {
@@ -22,7 +22,7 @@ export function createCommentCommand(): Command {
         try {
           content = await fs.readFile(reportPath, 'utf-8');
         } catch {
-          logger.error(`Report not found at ${reportPath}. Run 'aida report' first.`);
+          logger.error(`Report not found at ${reportPath}. Run 'evidtrail report' first.`);
           process.exit(1);
         }
 
@@ -55,7 +55,7 @@ export function createCommentCommand(): Command {
 
         logger.info(`Posting comment to ${provider.name} PR #${pr.prNumber}...`);
         await provider.postComment(content);
-        logger.info('AIDA report posted as PR comment');
+        logger.info('evidtrail report posted as PR comment');
       } catch (error) {
         logger.error(
           `Comment failed: ${describeError(error)}`

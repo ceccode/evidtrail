@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { collectCommits, writeJSON, createLogger, describeError } from '@aida-dev/core';
+import { collectCommits, writeJSON, createLogger, describeError } from '@evidtrail/core';
 import { join } from 'path';
 import { CLIConfig } from '../schema/config.js';
 import { detectPRBaseRef } from '../providers/pr-base.js';
@@ -31,7 +31,7 @@ export function createCollectCommand(): Command {
       '--redact-authors',
       'Replace author/committer identities with a per-run salted hash (recommended in CI)'
     )
-    .option('--out-dir <path>', 'Output directory', './aida-output')
+    .option('--out-dir <path>', 'Output directory', './evidtrail-output')
     .option('--verbose', 'Verbose logging', false)
     .action(async (options) => {
       // Commander uses singular camelCase (--ai-tool → aiTool), schema uses plural
@@ -46,8 +46,8 @@ export function createCollectCommand(): Command {
       const logger = createLogger(config.verbose);
 
       try {
-        // Load .aida.json config (merge with CLI flags)
-        const fileConfig = await loadAidaConfig(config.repo);
+        // Load .evidtrail.json config (merge with CLI flags)
+        const fileConfig = await loadAidaConfig(config.repo, logger);
         const aiPatterns = [...(fileConfig.patterns || []), ...config.aiPatterns];
         const aiTools = [...(fileConfig.tools || []), ...config.aiTools];
         const aiTrailerDomains = [...(fileConfig.trailerDomains || []), ...config.aiTrailerDomains];
@@ -84,7 +84,7 @@ export function createCollectCommand(): Command {
           aiBotBlocklist,
           defaultBranch: config.defaultBranch,
           scope: config.scope,
-          // CLI flag wins over .aida.json
+          // CLI flag wins over .evidtrail.json
           redactAuthors: config.redactAuthors ?? fileConfig.redactAuthors ?? false,
           logger,
         });

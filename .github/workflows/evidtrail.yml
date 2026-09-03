@@ -1,4 +1,4 @@
-name: AIDA Analyze
+name: evidtrail Analyze
 
 on:
   push:
@@ -54,29 +54,29 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-      - name: Run AIDA (full history on main)
+      - name: Run evidtrail (full history on main)
         if: github.event_name == 'push'
         run: |
-          node packages/cli/dist/index.js collect --out-dir ./.aida --redact-authors
-          node packages/cli/dist/index.js analyze --out-dir ./.aida
-          node packages/cli/dist/index.js report --out-dir ./.aida
+          node packages/cli/dist/index.js collect --out-dir ./.evidtrail --redact-authors
+          node packages/cli/dist/index.js analyze --out-dir ./.evidtrail
+          node packages/cli/dist/index.js report --out-dir ./.evidtrail
 
-      - name: Run AIDA (PR-scoped)
+      - name: Run evidtrail (PR-scoped)
         if: github.event_name == 'pull_request'
         run: |
-          node packages/cli/dist/index.js collect --pr --out-dir ./.aida --redact-authors
-          node packages/cli/dist/index.js analyze --out-dir ./.aida
-          node packages/cli/dist/index.js report --out-dir ./.aida
+          node packages/cli/dist/index.js collect --pr --out-dir ./.evidtrail --redact-authors
+          node packages/cli/dist/index.js analyze --out-dir ./.evidtrail
+          node packages/cli/dist/index.js report --out-dir ./.evidtrail
 
       # Keep the write-capable token away from code built from the PR. The
       # report is posted by GitHub's preinstalled CLI in its own narrow step.
-      - name: Post AIDA report to PR
+      - name: Post evidtrail report to PR
         if: github.event_name == 'pull_request'
         run: |
-          marker='<!-- aida-metrics-report -->'
+          marker='<!-- evidtrail-report -->'
           comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
-            --jq '.[] | select(.body | startswith("<!-- aida-metrics-report -->")) | .id' | head -n 1)
-          payload=$(jq -Rs --arg marker "$marker" '{body: ($marker + "\n" + .)}' < ./.aida/report.md)
+            --jq '.[] | select(.body | startswith("<!-- evidtrail-report -->") or startswith("<!-- aida-metrics-report -->")) | .id' | head -n 1)
+          payload=$(jq -Rs --arg marker "$marker" '{body: ($marker + "\n" + .)}' < ./.evidtrail/report.md)
           if [ -n "$comment_id" ]; then
             printf '%s' "$payload" | gh api --method PATCH \
               "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" --input -
@@ -88,12 +88,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
 
-      - name: Upload AIDA artifacts
+      - name: Upload evidtrail artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: aida-report
+          name: evidtrail-report
           include-hidden-files: true
           path: |
-            ./.aida/commit-stream.json
-            ./.aida/metrics.json
-            ./.aida/report.md
+            ./.evidtrail/commit-stream.json
+            ./.evidtrail/metrics.json
+            ./.evidtrail/report.md

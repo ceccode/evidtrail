@@ -3,18 +3,18 @@ import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { promisify } from 'util';
-import { createLogger, describeError } from '@aida-dev/core';
-import { loadAidaConfig } from '../config/load.js';
+import { createLogger, describeError } from '@evidtrail/core';
+import { CONFIG_FILENAME, findConfigFile, loadAidaConfig } from '../config/load.js';
 import { isAidaHookInstalled, isGitRepository } from '../hooks/detect.js';
 
 const execFileAsync = promisify(execFile);
 
-// `aida doctor`: every way a run can be quietly wrong, checked up front.
+// `evidtrail doctor`: every way a run can be quietly wrong, checked up front.
 //
 // Each of these has produced a confidently wrong report at least once: a
 // shallow clone truncating history, a partial clone that fails or lazily
 // downloads everything, a clone without the hook so nothing declares its
-// mode, a `.aida.json` still carrying a retired key. The individual commands
+// mode, a `.evidtrail.json` still carrying a retired key. The individual commands
 // warn about them mid-run; this asks all the questions before any run, and
 // answers each with the one-line fix.
 
@@ -54,7 +54,7 @@ export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
         name: 'git repository',
         status: 'fail',
         detail: `${repoPath} is not inside a git work tree`,
-        fix: 'Run aida from a clone, or pass --repo <path>.',
+        fix: 'Run evidtrail from a clone, or pass --repo <path>.',
       },
     ];
   }
@@ -96,7 +96,7 @@ export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
           name: 'clone contents',
           status: 'warn',
           detail: `partial clone (${filter || 'promisor'}) — collect and blame need blob contents and will fetch them on demand, slowly`,
-          fix: 'Clone without --filter for AIDA, or run git fetch --refetch once.',
+          fix: 'Clone without --filter for evidtrail, or run git fetch --refetch once.',
         }
       : { name: 'clone contents', status: 'ok', detail: 'blobs present' }
   );
@@ -109,39 +109,47 @@ export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
       : {
           name: 'default branch',
           status: 'warn',
-          detail: 'origin/HEAD is not set — AIDA falls back to main/master or the current branch',
+          detail: 'origin/HEAD is not set — evidtrail falls back to main/master or the current branch',
           fix: 'git remote set-head origin --auto, or pass --default-branch <name> to collect.',
         }
   );
 
   // Fail-fast on the config, exactly as analyze does: a malformed or
-  // retired-key .aida.json silently applying defaults is the failure this
+  // retired-key .evidtrail.json silently applying defaults is the failure this
   // project keeps designing against.
-  const configPath = join(repoPath, '.aida.json');
-  if (await exists(configPath)) {
+  const configFile = await findConfigFile(repoPath);
+  if (configFile) {
     try {
       const config = await loadAidaConfig(repoPath);
-      checks.push({
-        name: '.aida.json',
-        status: 'ok',
-        detail: config.defaultMode
-          ? `valid — defaultMode: ${config.defaultMode} (a prior: joins cohorts, never counts as evidence)`
-          : 'valid — no defaultMode prior',
-      });
+      const validity = config.defaultMode
+        ? `valid — defaultMode: ${config.defaultMode} (a prior: joins cohorts, never counts as evidence)`
+        : 'valid — no defaultMode prior';
+      checks.push(
+        configFile.legacy
+          ? {
+              // Still read, so not a failure — but a name that stops working
+              // next major deserves to be said out loud now, not then.
+              name: CONFIG_FILENAME,
+              status: 'warn',
+              detail: `${validity}, but stored as ${configFile.name} (pre-rename name)`,
+              fix: `git mv ${configFile.name} ${CONFIG_FILENAME}`,
+            }
+          : { name: CONFIG_FILENAME, status: 'ok', detail: validity }
+      );
     } catch (error) {
       checks.push({
-        name: '.aida.json',
+        name: CONFIG_FILENAME,
         status: 'fail',
         detail: describeError(error).split('\n')[0],
-        fix: 'Fix the file; aida analyze refuses to run with a broken config rather than apply defaults.',
+        fix: 'Fix the file; evidtrail analyze refuses to run with a broken config rather than apply defaults.',
       });
     }
   } else {
     checks.push({
-      name: '.aida.json',
+      name: CONFIG_FILENAME,
       status: 'warn',
       detail: 'absent — defaults apply (no prior, coverage threshold 70%)',
-      fix: 'aida init writes a starter config.',
+      fix: 'evidtrail init writes a starter config.',
     });
   }
 
@@ -155,7 +163,7 @@ export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
           name: 'commit hook (this clone)',
           status: 'warn',
           detail: 'not installed — commits made from this clone declare no autonomy mode',
-          fix: 'aida install-hooks, or aida init to also wire it into package.json prepare.',
+          fix: 'evidtrail install-hooks, or evidtrail init to also wire it into package.json prepare.',
         }
   );
 
@@ -167,13 +175,13 @@ export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
       };
       const prepare = pkg.scripts?.prepare ?? '';
       checks.push(
-        /aida\s+install-hooks|install-hooks\.mjs/.test(prepare)
+        /evidtrail\s+install-hooks|install-hooks\.mjs/.test(prepare)
           ? { name: 'prepare script', status: 'ok', detail: 'every clone installs the hook on install' }
           : {
               name: 'prepare script',
               status: 'warn',
-              detail: 'package.json has no AIDA prepare step — each clone must install the hook by hand',
-              fix: 'aida init adds "prepare": "aida install-hooks --if-git".',
+              detail: 'package.json has no evidtrail prepare step — each clone must install the hook by hand',
+              fix: 'evidtrail init adds "prepare": "evidtrail install-hooks --if-git".',
             }
       );
     } catch {
@@ -187,19 +195,19 @@ export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
     try {
       for (const file of await fs.readdir(workflowDir)) {
         const body = await fs.readFile(join(workflowDir, file), 'utf-8');
-        if (/aida/i.test(body)) hasAida = true;
+        if (/evidtrail/i.test(body)) hasAida = true;
       }
     } catch {
       // no workflows dir
     }
     checks.push(
       hasAida
-        ? { name: 'CI workflow', status: 'ok', detail: 'a workflow runs AIDA' }
+        ? { name: 'CI workflow', status: 'ok', detail: 'a workflow runs evidtrail' }
         : {
             name: 'CI workflow',
             status: 'warn',
-            detail: 'no workflow runs AIDA — PRs get no evidence comment',
-            fix: 'aida init writes .github/workflows/aida.yml.',
+            detail: 'no workflow runs evidtrail — PRs get no evidence comment',
+            fix: 'evidtrail init writes .github/workflows/evidtrail.yml.',
           }
     );
   }
@@ -221,7 +229,7 @@ export function formatDoctor(checks: DoctorCheck[]): string {
 
 export function createDoctorCommand(): Command {
   return new Command('doctor')
-    .description('Check this clone before running AIDA: history depth, hook, config, CI wiring')
+    .description('Check this clone before running evidtrail: history depth, hook, config, CI wiring')
     .option('--repo <path>', 'Repository path', process.cwd())
     .option('--json', 'Machine-readable output', false)
     .action(async (options) => {

@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'crypto';
 
-// Author redaction (#35). AIDA compares cohorts of commits, never people, and
+// Author redaction (#35). evidtrail compares cohorts of commits, never people, and
 // never emits per-author aggregates. But `commit-stream.json` carries author
 // and committer identities, and that file travels: committed to CI, uploaded
 // as a workflow artifact. A per-developer ranking is one `jq` query away.

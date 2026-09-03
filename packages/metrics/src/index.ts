@@ -6,7 +6,7 @@ import {
   METRICS_SCHEMA_VERSION,
   PRStream,
   formatISODate,
-} from '@aida-dev/core';
+} from '@evidtrail/core';
 import { calculateAgeStats, calculateCategoryCounts } from './cohort.js';
 import { calculateBaselinePersistence, calculatePersistence } from './persistence.js';
 import { calculateLineSurvival } from './line-survival.js';
@@ -42,9 +42,9 @@ export interface MetricsOptions {
   coverageThreshold?: number;
   // Window for the actionable coverage figure (#52)
   coverageWindowDays?: number;
-  // Optional PR outcomes from `aida fetch-prs` (#51)
+  // Optional PR outcomes from `evidtrail fetch-prs` (#51)
   prStream?: PRStream | null;
-  // Optional line-level blame data from `aida blame` (#23)
+  // Optional line-level blame data from `evidtrail blame` (#23)
   blameStream?: BlameStream | null;
   // Window for linking a hotfix to its likely antecedent (#26)
   hotfixWindowDays?: number;
@@ -230,7 +230,7 @@ export function calculateMetrics(
     })
   ) as ByMode;
 
-  // No baseline cohort → no baseline, no delta. AIDA does not invent a
+  // No baseline cohort → no baseline, no delta. evidtrail does not invent a
   // comparison out of unattributed commits.
   const baselineSize = baselineCommits.length;
   const baselineAssumed = defaultMode === 'none' && evidence.none > 0;
@@ -383,12 +383,12 @@ export function calculateMetrics(
   }
   if (!lineSurvival && commitStream.scope !== 'pr') {
     caveats.push(
-      "Line-level survival is unavailable: run 'aida blame' for exact per-line attribution instead of the file-level proxy."
+      "Line-level survival is unavailable: run 'evidtrail blame' for exact per-line attribution instead of the file-level proxy."
     );
   }
   if (!prAcceptance && commitStream.scope !== 'pr') {
     caveats.push(
-      "PR merge outcomes are unavailable: run 'aida fetch-prs' to compare merged and closed-unmerged work. Git history alone cannot recover discarded PRs."
+      "PR merge outcomes are unavailable: run 'evidtrail fetch-prs' to compare merged and closed-unmerged work. Git history alone cannot recover discarded PRs."
     );
   }
   if (baseline?.assumed && commitStream.scope !== 'pr') {
@@ -398,7 +398,7 @@ export function calculateMetrics(
   }
   if (!baseline && commitStream.scope !== 'pr') {
     caveats.push(
-      'No baseline: no commits sit at autonomy level \'none\'. Set defaultMode to "none" in .aida.json if the commits with no evidence in this repo were hand-written.'
+      'No baseline: no commits sit at autonomy level \'none\'. Set defaultMode to "none" in .evidtrail.json if the commits with no evidence in this repo were hand-written.'
     );
   }
 

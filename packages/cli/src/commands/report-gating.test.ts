@@ -17,7 +17,7 @@ let repoPath: string;
 let outDir: string;
 
 function git(cmd: string) {
-  execSync(cmd, { cwd: repoPath, env: { ...process.env, AIDA_MODE: '', CLAUDECODE: '' } });
+  execSync(cmd, { cwd: repoPath, env: { ...process.env, EVIDTRAIL_MODE: '', CLAUDECODE: '' } });
 }
 
 // The report has an observed-counts table AND cohort overlays; assertions
@@ -53,8 +53,8 @@ async function pipeline(
 }
 
 beforeEach(() => {
-  repoPath = mkdtempSync(join(tmpdir(), 'aida-gate-repo-'));
-  outDir = mkdtempSync(join(tmpdir(), 'aida-gate-out-'));
+  repoPath = mkdtempSync(join(tmpdir(), 'evidtrail-gate-repo-'));
+  outDir = mkdtempSync(join(tmpdir(), 'evidtrail-gate-out-'));
   git('git init -q -b main');
   git('git config user.name test && git config user.email test@example.com');
   vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -165,7 +165,7 @@ describe('PR comment is exception-driven', () => {
     const report = await prPipeline();
     const open = visible(report);
 
-    expect(open).toContain('**AIDA** ✅ 2 commits');
+    expect(open).toContain('**evidtrail** ✅ 2 commits');
     expect(open).toContain('agent 2');
     expect(open).toContain('every commit in this change set carries provenance');
     // One line in the open — the old version needed 38
@@ -203,11 +203,11 @@ describe('PR comment is exception-driven', () => {
     const report = await prPipeline();
     const open = visible(report);
 
-    expect(open).toContain('**AIDA** ⚠️ 2 commits');
+    expect(open).toContain('**evidtrail** ⚠️ 2 commits');
     expect(open).toContain('**1 commit without provenance** (50% coverage)');
     expect(open).toContain('feat: undeclared');
-    expect(open).toContain('aida install-hooks');
-    expect(open).toContain('"prepare": "aida install-hooks --if-git"');
+    expect(open).toContain('evidtrail install-hooks');
+    expect(open).toContain('"prepare": "evidtrail install-hooks --if-git"');
     // No defaultMode in this repo: no prior sentence to distract from the fix
     expect(open).not.toContain('defaultMode');
   });
@@ -215,7 +215,7 @@ describe('PR comment is exception-driven', () => {
 
 describe('PR-scoped evidence report', () => {
   it('names unknown commits and suppresses immature repository-time metrics', async () => {
-    writeFileSync(join(repoPath, '.aida.json'), JSON.stringify({ defaultMode: 'agent' }));
+    writeFileSync(join(repoPath, '.evidtrail.json'), JSON.stringify({ defaultMode: 'agent' }));
     writeFileSync(join(repoPath, 'base.ts'), 'export const base = true;\n');
     git('git add -A && git commit -q -m "chore: base"');
     git('git checkout -q -b feature');
@@ -235,7 +235,7 @@ describe('PR-scoped evidence report', () => {
     await run(createReportCommand(), ['--out-dir', outDir]);
 
     const report = readFileSync(join(outDir, 'report.md'), 'utf8');
-    expect(report).toContain('**AIDA** ⚠️');
+    expect(report).toContain('**evidtrail** ⚠️');
     expect(report).toContain(`\`${prHash.slice(0, 12)}\``);
     expect(report).toContain('feat: undeclared PR work');
     expect(report).toContain('a repository-wide prior is not evidence');
@@ -246,7 +246,7 @@ describe('PR-scoped evidence report', () => {
     expect(report).not.toContain('## Repository Change Signals');
     expect(report).not.toContain('### Trend');
     expect(report).not.toContain('## AI vs Baseline');
-    expect(report).not.toContain("run 'aida fetch-prs'");
+    expect(report).not.toContain("run 'evidtrail fetch-prs'");
 
     const info = vi.mocked(console.log).mock.calls.flat().join('\n');
     const warnings = vi.mocked(console.warn).mock.calls.flat().join('\n');

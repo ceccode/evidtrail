@@ -35,10 +35,10 @@ importers:
 
   packages/cli:
     dependencies:
-      '@aida-dev/core':
+      '@evidtrail/core':
         specifier: workspace:*
         version: link:../core
-      '@aida-dev/metrics':
+      '@evidtrail/metrics':
         specifier: workspace:*
         version: link:../metrics
       commander:
@@ -97,7 +97,7 @@ importers:
 
   packages/metrics:
     dependencies:
-      '@aida-dev/core':
+      '@evidtrail/core':
         specifier: workspace:*
         version: link:../core
       zod:

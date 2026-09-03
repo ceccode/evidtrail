@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateBaselinePersistence, calculatePersistence } from './persistence.js';
-import type { CommitStream } from '@aida-dev/core';
+import type { CommitStream } from '@evidtrail/core';
 
 function makeCommit(overrides: Partial<CommitStream['commits'][0]>): CommitStream['commits'][0] {
   const commit: CommitStream['commits'][0] = {

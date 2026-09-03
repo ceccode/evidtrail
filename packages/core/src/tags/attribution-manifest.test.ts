@@ -136,7 +136,7 @@ describe('applyManifest precedence', () => {
 
 describe('loadAttributionManifest', () => {
   it('returns null when the manifest is missing', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'aida-manifest-test-'));
+    const dir = mkdtempSync(join(tmpdir(), 'evidtrail-manifest-test-'));
     try {
       expect(await loadAttributionManifest(dir)).toBeNull();
     } finally {
@@ -145,14 +145,14 @@ describe('loadAttributionManifest', () => {
   });
 
   it('warns and returns null on an invalid manifest instead of throwing', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'aida-manifest-test-'));
+    const dir = mkdtempSync(join(tmpdir(), 'evidtrail-manifest-test-'));
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
     try {
-      writeFileSync(join(dir, 'aida-attribution.json'), '{ not json');
+      writeFileSync(join(dir, 'evidtrail-attribution.json'), '{ not json');
       expect(await loadAttributionManifest(dir, logger)).toBeNull();
       expect(logger.warn).toHaveBeenCalledOnce();
 
-      writeFileSync(join(dir, 'aida-attribution.json'), '{"ai_assisted_commits": "nope"}');
+      writeFileSync(join(dir, 'evidtrail-attribution.json'), '{"ai_assisted_commits": "nope"}');
       expect(await loadAttributionManifest(dir, logger)).toBeNull();
       expect(logger.warn).toHaveBeenCalledTimes(2);
     } finally {
@@ -160,11 +160,30 @@ describe('loadAttributionManifest', () => {
     }
   });
 
-  it('parses the documented format, defaulting absent lists', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'aida-manifest-test-'));
+  it('still reads the pre-rename aida-attribution.json, and says so', async () => {
+    // A manifest is retroactive evidence; losing it on upgrade would turn
+    // declared commits back into unknown without anyone noticing.
+    const dir = mkdtempSync(join(tmpdir(), 'evidtrail-manifest-test-'));
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
     try {
       writeFileSync(
         join(dir, 'aida-attribution.json'),
+        JSON.stringify({ version: '1.0', ai_assisted_commits: [{ hash: HASH_AI }] })
+      );
+      const manifest = await loadAttributionManifest(dir, logger);
+      expect(manifest?.ai_assisted_commits).toHaveLength(1);
+      expect(logger.warn).toHaveBeenCalledOnce();
+      expect(logger.warn.mock.calls[0][0]).toContain('evidtrail-attribution.json');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('parses the documented format, defaulting absent lists', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'evidtrail-manifest-test-'));
+    try {
+      writeFileSync(
+        join(dir, 'evidtrail-attribution.json'),
         JSON.stringify({
           version: '1.0',
           tool: 'windsurf',

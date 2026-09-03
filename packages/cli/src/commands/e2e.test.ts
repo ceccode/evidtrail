@@ -26,8 +26,8 @@ function run(command: Command, args: string[]): Promise<Command> {
 }
 
 beforeAll(() => {
-  repoPath = mkdtempSync(join(tmpdir(), 'aida-e2e-repo-'));
-  outDir = mkdtempSync(join(tmpdir(), 'aida-e2e-out-'));
+  repoPath = mkdtempSync(join(tmpdir(), 'evidtrail-e2e-repo-'));
+  outDir = mkdtempSync(join(tmpdir(), 'evidtrail-e2e-out-'));
 
   git('git init -q -b main');
   git('git config user.name test && git config user.email test@example.com');
@@ -99,7 +99,7 @@ describe('collect → analyze → report end to end', () => {
     await run(createReportCommand(), ['--out-dir', outDir]);
 
     const report = readFileSync(join(outDir, 'report.md'), 'utf-8');
-    expect(report).toContain('# AIDA Report');
+    expect(report).toContain('# evidtrail Report');
     // Quality first (#77 step 2): the repo-level section opens the report,
     // the autonomy lens follows, coverage sits at the bottom as Data Quality
     expect(report).toContain('## Repository Change Signals');
@@ -141,7 +141,7 @@ describe('collect → analyze → report end to end', () => {
   });
 
   it('applies --redact-authors through the CLI', async () => {
-    const redactedDir = mkdtempSync(join(tmpdir(), 'aida-e2e-redacted-'));
+    const redactedDir = mkdtempSync(join(tmpdir(), 'evidtrail-e2e-redacted-'));
     try {
       await run(createCollectCommand(), [
         '--repo',
@@ -164,14 +164,14 @@ describe('PR acceptance (#51)', () => {
   it('is absent — with a caveat, never a silent 0% — when fetch-prs has not run', async () => {
     const metrics = JSON.parse(readFileSync(join(outDir, 'metrics.json'), 'utf-8'));
     expect(metrics.prAcceptance).toBeNull();
-    expect(metrics.caveats.join(' ')).toContain("run 'aida fetch-prs'");
+    expect(metrics.caveats.join(' ')).toContain("run 'evidtrail fetch-prs'");
 
     const report = readFileSync(join(outDir, 'report.md'), 'utf-8');
     expect(report).not.toContain('## PR Merge Outcome');
   });
 
   it('is computed and rendered when a pr-stream.json is present', async () => {
-    const prDir = mkdtempSync(join(tmpdir(), 'aida-e2e-prs-'));
+    const prDir = mkdtempSync(join(tmpdir(), 'evidtrail-e2e-prs-'));
     try {
       await run(createCollectCommand(), ['--repo', repoPath, '--out-dir', prDir]);
 
@@ -258,7 +258,7 @@ describe('PR acceptance (#51)', () => {
 
 describe('schema version gate', () => {
   it('refuses an incompatible commit-stream instead of parsing it half-way', async () => {
-    const staleDir = mkdtempSync(join(tmpdir(), 'aida-e2e-stale-'));
+    const staleDir = mkdtempSync(join(tmpdir(), 'evidtrail-e2e-stale-'));
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit');
     });
@@ -274,7 +274,7 @@ describe('schema version gate', () => {
         'process.exit'
       );
       expect(errorSpy.mock.calls.flat().join(' ')).toMatch(
-        /no schemaVersion field.*Rerun 'aida collect'/
+        /no schemaVersion field.*Rerun 'evidtrail collect'/
       );
     } finally {
       exitSpy.mockRestore();
@@ -284,7 +284,7 @@ describe('schema version gate', () => {
   });
 
   it('refuses to join blame data from another repository snapshot', async () => {
-    const staleDir = mkdtempSync(join(tmpdir(), 'aida-e2e-blame-snapshot-'));
+    const staleDir = mkdtempSync(join(tmpdir(), 'evidtrail-e2e-blame-snapshot-'));
     const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit');
     });

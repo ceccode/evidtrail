@@ -1,5 +1,5 @@
 {
-  "name": "aida-metrics",
+  "name": "evidtrail",
   "private": false,
   "version": "0.1.0",
   "publishConfig": {
@@ -42,12 +42,12 @@
   ],
   "author": "Francesco Falanga <falanga.fra@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/ceccode/aida-metrics#readme",
+  "homepage": "https://github.com/ceccode/evidtrail#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ceccode/aida-metrics.git"
+    "url": "https://github.com/ceccode/evidtrail.git"
   },
   "bugs": {
-    "url": "https://github.com/ceccode/aida-metrics/issues"
+    "url": "https://github.com/ceccode/evidtrail/issues"
   }
 }

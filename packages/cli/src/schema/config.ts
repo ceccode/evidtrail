@@ -11,7 +11,7 @@ export const CLIConfig = z.object({
   defaultBranch: z.string().optional(),
   scope: z.enum(['default-branch', 'all-refs']).default('default-branch'),
   redactAuthors: z.boolean().optional(),
-  outDir: z.string().default('./aida-output'),
+  outDir: z.string().default('./evidtrail-output'),
   verbose: z.boolean().default(false),
 });
 

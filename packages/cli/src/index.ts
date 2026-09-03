@@ -2,6 +2,7 @@
 
 import { Command } from 'commander';
 import { createRequire } from 'module';
+import { basename } from 'path';
 import { createCollectCommand } from './commands/collect.js';
 import { createBlameCommand } from './commands/blame.js';
 import { createInstallHooksCommand } from './commands/install-hooks.js';
@@ -19,9 +20,18 @@ const { version } = createRequire(import.meta.url)('../package.json') as { versi
 
 const program = new Command();
 
+// `aida` stays as an alias for one release so existing `prepare` scripts and
+// CI steps keep working; the notice goes to stderr so piped output is clean.
+const invokedAs = basename(process.argv[1] ?? '');
+if (invokedAs === 'aida') {
+  process.stderr.write(
+    'aida was renamed to evidtrail; the `aida` command will be removed in the next major. Run `evidtrail` instead.\n'
+  );
+}
+
 program
-  .name('aida')
-  .description('AIDA (AI Development Accounting) - Metrics for AI-assisted development')
+  .name('evidtrail')
+  .description('An auditable ledger of AI provenance and change signals for your git repositories')
   .version(version);
 
 // Add commands
@@ -34,7 +44,7 @@ program.addCommand(createReportCommand());
 program.addCommand(createCommentCommand());
 program.addCommand(createInitCommand());
 program.addCommand(createDoctorCommand());
-// Default subcommand: `aida --since 90d` runs the pipeline. See run.ts for why
+// Default subcommand: `evidtrail --since 90d` runs the pipeline. See run.ts for why
 // this is a subcommand and not root options.
 program.addCommand(createRunCommand(), { isDefault: true });
 

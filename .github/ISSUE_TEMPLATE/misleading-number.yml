@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        This is the bug report AIDA most wants to receive. If a report made you believe something the repository does not support, that is a defect even if every digit is right.
+        This is the bug report evidtrail most wants to receive. If a report made you believe something the repository does not support, that is a defect even if every digit is right.
   - type: textarea
     id: number
     attributes:
@@ -29,8 +29,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: AIDA version
-      placeholder: "aida --version"
+      label: evidtrail version
+      placeholder: "evidtrail --version"
     validations:
       required: true
   - type: textarea

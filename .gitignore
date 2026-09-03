@@ -8,11 +8,14 @@ dist/
 .env.test.local
 coverage/
 .nyc_output/
+.evidtrail/
+evidtrail-output/
+# pre-rename names, still ignored so old local runs do not get committed
 .aida/
 aida-output/
 *.tsbuildinfo
 
-# AIDA generated output files
+# evidtrail generated output files
 commit-stream.json
 metrics.json
 report.json

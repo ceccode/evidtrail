@@ -66,7 +66,7 @@ body {
     margin: 0;
 }
 
-.brand-aida {
+.brand-evidtrail {
     font-weight: 700;
 }
 
@@ -620,7 +620,7 @@ body {
 }
 
 
-/* FAQ / What AIDA is not */
+/* FAQ / What evidtrail is not */
 .faq { padding: 4rem 0; }
 .faq h2 { text-align: center; margin-bottom: 1rem; }
 .faq-lead { max-width: 760px; margin: 0 auto 2.5rem; text-align: center; opacity: 0.85; line-height: 1.6; }

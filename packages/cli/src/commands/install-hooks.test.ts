@@ -15,7 +15,7 @@ let repoPath: string;
 // The suite may itself run inside an agent environment (it did during
 // development: the hook correctly detected Claude Code and stamped every
 // commit). Tests must therefore control detection inputs explicitly.
-const DETECTION_VARS = ['AIDA_MODE', 'CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'CURSOR_TRACE_ID'];
+const DETECTION_VARS = ['EVIDTRAIL_MODE', 'AIDA_MODE', 'CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'CURSOR_TRACE_ID'];
 
 function git(cmd: string, env: Record<string, string> = {}) {
   const clean = { ...process.env };
@@ -32,7 +32,7 @@ function hookPath(): string {
 }
 
 beforeEach(() => {
-  repoPath = mkdtempSync(join(tmpdir(), 'aida-hooks-'));
+  repoPath = mkdtempSync(join(tmpdir(), 'evidtrail-hooks-'));
   git('git init -q -b main');
   git('git config user.name test && git config user.email test@example.com');
   vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -44,13 +44,23 @@ afterEach(() => {
   rmSync(repoPath, { recursive: true, force: true });
 });
 
-describe('aida install-hooks', () => {
+describe('evidtrail install-hooks', () => {
   it('installs an executable hook', async () => {
     await run(createInstallHooksCommand(), ['--repo', repoPath]);
 
     expect(existsSync(hookPath())).toBe(true);
     expect(statSync(hookPath()).mode & 0o111).toBeTruthy();
     expect(readFileSync(hookPath(), 'utf-8')).toContain('AI-Mode');
+  });
+
+  it('upgrades a hook written before the rename instead of refusing it as foreign', async () => {
+    writeFileSync(
+      hookPath(),
+      '#!/bin/sh\n# >>> aida-metrics mode stamp >>>\necho old body\n# <<< aida-metrics mode stamp <<<\n',
+      { mode: 0o755 }
+    );
+    await run(createInstallHooksCommand(), ['--repo', repoPath]);
+    expect(readFileSync(hookPath(), 'utf-8')).toBe(HOOK_SCRIPT);
   });
 
   it('is idempotent', async () => {
@@ -70,7 +80,7 @@ describe('aida install-hooks', () => {
     await expect(run(createInstallHooksCommand(), ['--repo', repoPath])).rejects.toThrow(
       'process.exit'
     );
-    expect(errorSpy.mock.calls.flat().join(' ')).toContain('not written by AIDA');
+    expect(errorSpy.mock.calls.flat().join(' ')).toContain('not written by evidtrail');
     // The foreign hook is untouched
     expect(readFileSync(hookPath(), 'utf-8')).toContain('echo mine');
 
@@ -95,7 +105,7 @@ describe('aida install-hooks', () => {
   // build. Erroring there would break unrelated installs.
   describe('--if-git (safe in a package.json prepare script)', () => {
     it('exits quietly outside a git repository instead of failing', async () => {
-      const bare = mkdtempSync(join(tmpdir(), 'aida-nogit-'));
+      const bare = mkdtempSync(join(tmpdir(), 'evidtrail-nogit-'));
       try {
         await expect(
           run(createInstallHooksCommand(), ['--repo', bare, '--if-git'])
@@ -131,7 +141,7 @@ describe('aida install-hooks', () => {
     });
   });
 
-  it('uninstall is a no-op when no AIDA hook is present', async () => {
+  it('uninstall is a no-op when no evidtrail hook is present', async () => {
     writeFileSync(hookPath(), '#!/bin/sh\necho mine\n', { mode: 0o755 });
     await run(createInstallHooksCommand(), ['--repo', repoPath, '--uninstall']);
     expect(readFileSync(hookPath(), 'utf-8')).toContain('echo mine');
@@ -143,7 +153,7 @@ describe('this repository prepare bootstrap', () => {
     // Regression: root `pnpm install` used to skip installation whenever
     // packages/cli/dist/index.js did not exist — exactly the state of a fresh
     // clone. Nothing failed, but every subsequent commit silently lost its
-    // provenance and AIDA reported it as unknown.
+    // provenance and evidtrail reported it as unknown.
     const installer = fileURLToPath(
       new URL('../../../../scripts/install-hooks.mjs', import.meta.url)
     );
@@ -163,13 +173,13 @@ describe('the installed hook, running for real', () => {
     await run(createInstallHooksCommand(), ['--repo', repoPath]);
   });
 
-  it('stamps AI-Mode from AIDA_MODE and collect reads it as declared', async () => {
-    git('git commit -q --allow-empty -m "feat: agent work"', { AIDA_MODE: 'agent' });
+  it('stamps AI-Mode from EVIDTRAIL_MODE and collect reads it as declared', async () => {
+    git('git commit -q --allow-empty -m "feat: agent work"', { EVIDTRAIL_MODE: 'agent' });
 
     const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
     expect(message).toContain('AI-Mode: agent');
 
-    const outDir = mkdtempSync(join(tmpdir(), 'aida-hooks-out-'));
+    const outDir = mkdtempSync(join(tmpdir(), 'evidtrail-hooks-out-'));
     try {
       await run(createCollectCommand(), ['--repo', repoPath, '--out-dir', outDir]);
       const stream = JSON.parse(readFileSync(join(outDir, 'commit-stream.json'), 'utf-8'));
@@ -182,10 +192,10 @@ describe('the installed hook, running for real', () => {
     }
   });
 
-  it('declares human authorship with AIDA_MODE=none', async () => {
-    git('git commit -q --allow-empty -m "fix: hand written"', { AIDA_MODE: 'none' });
+  it('declares human authorship with EVIDTRAIL_MODE=none', async () => {
+    git('git commit -q --allow-empty -m "fix: hand written"', { EVIDTRAIL_MODE: 'none' });
 
-    const outDir = mkdtempSync(join(tmpdir(), 'aida-hooks-out-'));
+    const outDir = mkdtempSync(join(tmpdir(), 'evidtrail-hooks-out-'));
     try {
       await run(createCollectCommand(), ['--repo', repoPath, '--out-dir', outDir]);
       const stream = JSON.parse(readFileSync(join(outDir, 'commit-stream.json'), 'utf-8'));
@@ -204,23 +214,42 @@ describe('the installed hook, running for real', () => {
     expect(message).not.toContain('AI-Mode');
   });
 
-  it('rejects an invalid AIDA_MODE instead of stamping garbage', () => {
-    git('git commit -q --allow-empty -m "chore: bogus mode"', { AIDA_MODE: 'wizard' });
+  it('rejects an invalid EVIDTRAIL_MODE instead of stamping garbage', () => {
+    git('git commit -q --allow-empty -m "chore: bogus mode"', { EVIDTRAIL_MODE: 'wizard' });
     const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
     expect(message).not.toContain('AI-Mode');
   });
 
   it('does not double-stamp a message that already declares a mode', () => {
     git('git commit -q --allow-empty -m "feat: x" -m "AI-Mode: assisted"', {
-      AIDA_MODE: 'agent',
+      EVIDTRAIL_MODE: 'agent',
     });
     const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
     expect(message.match(/AI-Mode:/g)).toHaveLength(1);
     expect(message).toContain('AI-Mode: assisted');
   });
 
-  it('reads defaultMode from .aida.json when nothing else determines it', () => {
-    writeFileSync(join(repoPath, '.aida.json'), JSON.stringify({ defaultMode: 'assisted' }));
+  it('honours the pre-rename AIDA_MODE when EVIDTRAIL_MODE is unset', () => {
+    git('git commit -q --allow-empty -m "feat: old env"', { AIDA_MODE: 'assisted' });
+    const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
+    expect(message).toContain('AI-Mode: assisted');
+  });
+
+  it('lets EVIDTRAIL_MODE win over AIDA_MODE when both are set', () => {
+    git('git commit -q --allow-empty -m "feat: both env"', { EVIDTRAIL_MODE: 'agent', AIDA_MODE: 'none' });
+    const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
+    expect(message).toContain('AI-Mode: agent');
+  });
+
+  it('reads defaultMode from the pre-rename .aida.json when nothing else determines it', () => {
+    writeFileSync(join(repoPath, '.aida.json'), JSON.stringify({ defaultMode: 'autocomplete' }));
+    git('git add -A && git commit -q -m "chore: old config"');
+    const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
+    expect(message).toContain('AI-Mode: autocomplete');
+  });
+
+  it('reads defaultMode from .evidtrail.json when nothing else determines it', () => {
+    writeFileSync(join(repoPath, '.evidtrail.json'), JSON.stringify({ defaultMode: 'assisted' }));
     git('git add -A && git commit -q -m "chore: config"');
     const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
     expect(message).toContain('AI-Mode: assisted');
@@ -230,7 +259,7 @@ describe('the installed hook, running for real', () => {
     // A hook whose logic throws must still let the commit through
     writeFileSync(
       hookPath(),
-      '#!/bin/sh\n# >>> aida-metrics mode stamp >>>\nthis-command-does-not-exist 2>/dev/null || true\nexit 0\n# <<< aida-metrics mode stamp <<<\n',
+      '#!/bin/sh\n# >>> evidtrail mode stamp >>>\nthis-command-does-not-exist 2>/dev/null || true\nexit 0\n# <<< evidtrail mode stamp <<<\n',
       { mode: 0o755 }
     );
     expect(() => git('git commit -q --allow-empty -m "chore: survives"')).not.toThrow();
@@ -238,7 +267,7 @@ describe('the installed hook, running for real', () => {
 });
 
 // #75 point 3: the low-coverage warning is where eyes already are, so when
-// the repo is configured for AIDA but this clone is not, say exactly that
+// the repo is configured for evidtrail but this clone is not, say exactly that
 // instead of repeating generic advice.
 describe('low-coverage warning names a missing hook in a configured repo', () => {
   let outDir: string;
@@ -258,7 +287,7 @@ describe('low-coverage warning names a missing hook in a configured repo', () =>
   }
 
   beforeEach(() => {
-    outDir = mkdtempSync(join(tmpdir(), 'aida-warn-out-'));
+    outDir = mkdtempSync(join(tmpdir(), 'evidtrail-warn-out-'));
     // A commit with no declaration at all: coverage 0%, warning guaranteed
     git('git commit -q --allow-empty -m "chore: undeclared"');
   });
@@ -267,8 +296,8 @@ describe('low-coverage warning names a missing hook in a configured repo', () =>
     rmSync(outDir, { recursive: true, force: true });
   });
 
-  it('names the hook when .aida.json exists but the clone has none', async () => {
-    writeFileSync(join(repoPath, '.aida.json'), JSON.stringify({ coverageThreshold: 0.7 }));
+  it('names the hook when .evidtrail.json exists but the clone has none', async () => {
+    writeFileSync(join(repoPath, '.evidtrail.json'), JSON.stringify({ coverageThreshold: 0.7 }));
 
     const warnings = await analyzeAndCaptureWarnings();
 
@@ -278,7 +307,7 @@ describe('low-coverage warning names a missing hook in a configured repo', () =>
   });
 
   it('stays generic when the clone already has the hook', async () => {
-    writeFileSync(join(repoPath, '.aida.json'), JSON.stringify({ coverageThreshold: 0.7 }));
+    writeFileSync(join(repoPath, '.evidtrail.json'), JSON.stringify({ coverageThreshold: 0.7 }));
     await run(createInstallHooksCommand(), ['--repo', repoPath]);
 
     const warnings = await analyzeAndCaptureWarnings();
@@ -287,8 +316,8 @@ describe('low-coverage warning names a missing hook in a configured repo', () =>
     expect(warnings).not.toContain('THIS CLONE');
   });
 
-  it('stays generic on a repo that never opted into AIDA', async () => {
-    // e.g. someone running AIDA over a repo they do not own: no .aida.json,
+  it('stays generic on a repo that never opted into evidtrail', async () => {
+    // e.g. someone running evidtrail over a repo they do not own: no .evidtrail.json,
     // so a missing hook is not a misconfiguration to complain about
     const warnings = await analyzeAndCaptureWarnings();
 

@@ -4,7 +4,7 @@
 // and `child_process.exec` both do this. On a large repo that is not a
 // message, it is a data dump — a broken `git log --numstat` over babel printed
 // 22MB of per-file statistics with the one useful line, `fatal: unable to read
-// <object>`, buried somewhere inside it. Found while running AIDA against
+// <object>`, buried somewhere inside it. Found while running evidtrail against
 // babel, where diagnosing a bad clone took far longer than it should have.
 //
 // git puts the actual diagnosis on lines prefixed `fatal:` or `error:`, so

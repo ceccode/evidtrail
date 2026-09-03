@@ -1,6 +1,6 @@
-# @aida-dev/metrics
+# @evidtrail/metrics
 
-Deterministic metric calculation for versioned AIDA repository snapshots.
+Deterministic metric calculation for versioned evidtrail repository snapshots.
 
 ## What it calculates
 
@@ -11,12 +11,12 @@ Deterministic metric calculation for versioned AIDA repository snapshots.
 - **Outcome correlation** — git-visible reverts and hotfix-pattern commits, expressed against each cohort's authored-commit base rate. The results are descriptive, not causal, and do not include incidents or external security findings.
 - **PR acceptance** — optional forge PR input reports merged versus closed-unmerged PRs, including attribution and autonomy breakdowns. It is absent when no PR stream is supplied, never silently zero.
 
-For why AIDA does not calculate Merge Ratio from Git history, see [Why there is no Merge Ratio](../../README.md#why-there-is-no-merge-ratio) in the repository README.
+For why evidtrail does not calculate Merge Ratio from Git history, see [Why there is no Merge Ratio](../../README.md#why-there-is-no-merge-ratio) in the repository README.
 
 ## Usage
 
 ```typescript
-import { calculateMetrics } from '@aida-dev/metrics';
+import { calculateMetrics } from '@evidtrail/metrics';
 
 const metrics = calculateMetrics(commitStream);
 const retouch30 = metrics.repo.persistence.rapidRetouch.find((r) => r.windowDays === 30);
@@ -24,4 +24,4 @@ console.log(`30-day rapid retouch: ${retouch30?.rate ?? 'unavailable'}`);
 console.log(`Evidence coverage: ${metrics.attribution.coverage}`);
 ```
 
-Pass `blameStream` from `aida blame` or `prStream` from `aida fetch-prs` to calculate the corresponding optional metrics. See the root [README](../../README.md) for the metric contracts, caveats, and CLI workflow.
+Pass `blameStream` from `evidtrail blame` or `prStream` from `evidtrail fetch-prs` to calculate the corresponding optional metrics. See the root [README](../../README.md) for the metric contracts, caveats, and CLI workflow.

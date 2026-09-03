@@ -1,6 +1,6 @@
-# Contributing to AIDA
+# Contributing to evidtrail
 
-Thanks for looking. AIDA's whole value is that its numbers are honest, so the bar for a change is not "does it work" but **"can this number mislead someone who trusts it?"** Everything below follows from that.
+Thanks for looking. evidtrail's whole value is that its numbers are honest, so the bar for a change is not "does it work" but **"can this number mislead someone who trusts it?"** Everything below follows from that.
 
 ## Setup
 
@@ -26,7 +26,7 @@ A number that was **arithmetically correct and still led you to a wrong conclusi
 
 ## Commit provenance
 
-This repository measures itself with its own tool, so commits should say how they were produced. The hook installed by `pnpm install` stamps an `AI-Mode:` trailer automatically when it detects an agent session. If it did not fire, set `AIDA_MODE=agent` (or `assisted` / `autocomplete` / `none`) when committing. **Never stamp a mode that is not true** — a wrong declaration is worse than none. Agent-written commits carry `Co-Authored-By: Claude <noreply@anthropic.com>`.
+This repository measures itself with its own tool, so commits should say how they were produced. The hook installed by `pnpm install` stamps an `AI-Mode:` trailer automatically when it detects an agent session. If it did not fire, set `EVIDTRAIL_MODE=agent` (or `assisted` / `autocomplete` / `none`) when committing. **Never stamp a mode that is not true** — a wrong declaration is worse than none. Agent-written commits carry `Co-Authored-By: Claude <noreply@anthropic.com>`.
 
 ## Things that look like bugs and are not
 

@@ -1,4 +1,4 @@
-import { Commit, CommitStream, daysBetween } from '@aida-dev/core';
+import { Commit, CommitStream, daysBetween } from '@evidtrail/core';
 import { HotfixStats, OutcomeCorrelation, RevertStats } from './schema/metrics.js';
 
 // Outcome correlation (#26), scoped to what git can actually answer.

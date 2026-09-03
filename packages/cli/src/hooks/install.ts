@@ -1,10 +1,16 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
-import { HOOK_END_MARKER, HOOK_MARKER, HOOK_SCRIPT } from './prepare-commit-msg.js';
+import {
+  HOOK_END_MARKER,
+  HOOK_MARKER,
+  HOOK_SCRIPT,
+  LEGACY_HOOK_END_MARKER,
+  LEGACY_HOOK_MARKER,
+} from './prepare-commit-msg.js';
 import { HOOK_NAME, isAidaHook, resolveHooksDir } from './detect.js';
 
 // The hook install used to live inside the `install-hooks` command action.
-// `aida init` needs the same behaviour without shelling out to itself, so it
+// `evidtrail init` needs the same behaviour without shelling out to itself, so it
 // is a plain function now and the command is a thin wrapper around it.
 
 export type HookInstallResult =
@@ -26,7 +32,7 @@ export async function installAidaHook(
     existing = null;
   }
 
-  // Idempotent by content, not by presence: an older AIDA hook body is
+  // Idempotent by content, not by presence: an older evidtrail hook body is
   // rewritten, an identical one is left alone, a foreign one is never
   // touched without --force — it is someone else's hook.
   if (existing === HOOK_SCRIPT) return { status: 'unchanged', hookPath };
@@ -39,14 +45,20 @@ export async function installAidaHook(
   return { status: 'installed', hookPath };
 }
 
-// Removes only AIDA's marked block, leaving any surrounding hook intact.
+// Removes only evidtrail's marked block, leaving any surrounding hook intact.
 function stripAidaBlock(content: string): string {
-  const start = content.indexOf(HOOK_MARKER);
-  const end = content.indexOf(HOOK_END_MARKER);
-  if (start === -1 || end === -1) return content;
-  const before = content.slice(0, start);
-  const after = content.slice(end + HOOK_END_MARKER.length);
-  return `${before.trimEnd()}\n${after.trimStart()}`.trim() + '\n';
+  for (const [startMarker, endMarker] of [
+    [HOOK_MARKER, HOOK_END_MARKER],
+    [LEGACY_HOOK_MARKER, LEGACY_HOOK_END_MARKER],
+  ]) {
+    const start = content.indexOf(startMarker);
+    const end = content.indexOf(endMarker);
+    if (start === -1 || end === -1) continue;
+    const before = content.slice(0, start);
+    const after = content.slice(end + endMarker.length);
+    return `${before.trimEnd()}\n${after.trimStart()}`.trim() + '\n';
+  }
+  return content;
 }
 
 export type HookUninstallResult =

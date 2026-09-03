@@ -14,7 +14,7 @@ function git(cmd: string) {
 }
 
 beforeAll(() => {
-  repoPath = mkdtempSync(join(tmpdir(), 'aida-blame-'));
+  repoPath = mkdtempSync(join(tmpdir(), 'evidtrail-blame-'));
   git('git init -q -b main');
   git('git config user.name test && git config user.email test@example.com');
 
@@ -50,7 +50,7 @@ describe('blameFileLineCounts', () => {
   // inside double quotes. This regression proves the absence of execution,
   // rather than merely proving that ordinary paths continue to work.
   it('treats hostile git paths as data and never executes them', async () => {
-    const hostile = mkdtempSync(join(tmpdir(), 'aida-blame-hostile-'));
+    const hostile = mkdtempSync(join(tmpdir(), 'evidtrail-blame-hostile-'));
     execSync('git init -q -b main', { cwd: hostile });
     execSync('git config user.name test && git config user.email test@example.com', {
       cwd: hostile,
@@ -116,11 +116,11 @@ describe('collectBlame', () => {
     expect(stream.filesBlamed).toBe(1);
   });
 
-  // Found by running AIDA against babel: `--max-files 500` over 27,648 files
+  // Found by running evidtrail against babel: `--max-files 500` over 27,648 files
   // blamed only paths sorted before `packages/babel-c*`, 183 of them from a
   // single package, and the report called the result "a sample".
   it('spreads a capped sample across the tree instead of taking a path-order prefix', async () => {
-    const wide = mkdtempSync(join(tmpdir(), 'aida-blame-wide-'));
+    const wide = mkdtempSync(join(tmpdir(), 'evidtrail-blame-wide-'));
     execSync('git init -q -b main', { cwd: wide });
     execSync('git config user.name test && git config user.email test@example.com', { cwd: wide });
     for (const pkg of ['a-pkg', 'm-pkg', 'z-pkg']) {
@@ -150,7 +150,7 @@ describe('collectBlame', () => {
   // per chunk, and babel's worst file produced 78KB against a 64MB cap — but
   // submodules and missing objects in a partial clone reach it routinely.
   it('counts a failing blame apart from a skipped one and warns', async () => {
-    const broken = mkdtempSync(join(tmpdir(), 'aida-blame-broken-'));
+    const broken = mkdtempSync(join(tmpdir(), 'evidtrail-blame-broken-'));
     execSync('git init -q -b main', { cwd: broken });
     execSync('git config user.name test && git config user.email test@example.com', {
       cwd: broken,
