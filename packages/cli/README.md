@@ -15,7 +15,7 @@ npm install -g @aida-dev/cli
 ```bash
 aida init      # config + commit hook + prepare script + CI workflow, nothing overwritten
 aida doctor    # is this clone safe to measure? shallow clone, hook, config, CI
-aida           # collect → analyze → report
+aida           # collect → analyze → report (same as `aida run`)
 ```
 
 ### Basic workflow

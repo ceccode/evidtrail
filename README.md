@@ -172,12 +172,13 @@ Ask every question that can make a run quietly wrong, before running: clone dept
 aida doctor
 ```
 
-#### `aida`
+#### `aida` / `aida run`
 
-With no subcommand, runs `collect → analyze → report`. The granular commands below remain for CI and single-stage use.
+With no subcommand (or explicitly as `aida run`), runs `collect → analyze → report`. The granular commands below remain for CI and single-stage use.
 
 ```bash
 aida --since 90d
+aida run --since 90d --out-dir ./.aida
 ```
 
 #### `aida collect`
@@ -242,7 +243,7 @@ aida report --out-dir ./aida-output
 - `--repo <path>` - Repository path (default: current directory)
 - `--json` - Machine-readable output
 
-#### `aida` (no subcommand)
+#### `aida run` (also the default with no subcommand)
 
 - `--repo <path>`, `--since <date>`, `--out-dir <path>`, `--verbose` - passed through to the pipeline
 
