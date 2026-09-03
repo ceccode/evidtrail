@@ -1,7 +1,7 @@
 {
   "name": "@aida-dev/metrics",
   "version": "1.0.2",
-  "description": "Deterministic rapid-retouch, trend, attribution, and outcome metrics for AIDA",
+  "description": "Deterministic rapid-retouch, trend, cohort, and outcome metrics for AIDA. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -31,21 +31,27 @@
   },
   "keywords": [
     "ai",
-    "development",
-    "metrics",
+    "ai-attribution",
+    "provenance",
     "git",
-    "analysis"
+    "engineering-metrics",
+    "ai-coding",
+    "claude-code",
+    "github-copilot",
+    "cursor",
+    "devex",
+    "metrics"
   ],
   "author": "Francesco Falanga <falanga.fra@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/ceccode/aida-metrics#readme",
+  "homepage": "https://ceccode.github.io/AIDA-Metrics/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ceccode/aida-metrics.git",
+    "url": "https://github.com/ceccode/AIDA-Metrics.git",
     "directory": "packages/metrics"
   },
   "bugs": {
-    "url": "https://github.com/ceccode/aida-metrics/issues"
+    "url": "https://github.com/ceccode/AIDA-Metrics/issues"
   },
   "engines": {
     "node": ">=22.0.0"

@@ -1,7 +1,7 @@
 {
   "name": "@aida-dev/cli",
   "version": "1.0.2",
-  "description": "CLI for the AIDA auditable evidence ledger",
+  "description": "Auditable AI provenance and change signals from git — CLI and GitHub Action. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -14,24 +14,28 @@
   },
   "keywords": [
     "ai",
-    "development",
-    "metrics",
+    "ai-attribution",
+    "provenance",
     "git",
-    "cli",
-    "copilot",
+    "engineering-metrics",
+    "ai-coding",
+    "claude-code",
+    "github-copilot",
     "cursor",
-    "claude"
+    "devex",
+    "cli",
+    "github-actions"
   ],
   "author": "Francesco Falanga <falanga.fra@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/ceccode/aida-metrics#readme",
+  "homepage": "https://ceccode.github.io/AIDA-Metrics/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ceccode/aida-metrics.git",
+    "url": "https://github.com/ceccode/AIDA-Metrics.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/ceccode/aida-metrics/issues"
+    "url": "https://github.com/ceccode/AIDA-Metrics/issues"
   },
   "engines": {
     "node": ">=22.0.0"

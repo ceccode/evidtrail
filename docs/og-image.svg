@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0f172a"/>
+  <path d="M96 395 176 255l80 140h-36l-14.4-28h-59.2L132 395Z" fill="#38bdf8"/>
+  <text x="300" y="262" font-family="monospace" font-size="60" font-weight="700" fill="#f8fafc">AIDA</text>
+  <text x="300" y="322" font-family="monospace" font-size="26" fill="#94a3b8">An auditable ledger of AI provenance</text>
+  <text x="300" y="360" font-family="monospace" font-size="26" fill="#94a3b8">and change signals for your git repositories.</text>
+  <text x="300" y="428" font-family="monospace" font-size="24" fill="#38bdf8">Honest about what git can, and cannot, prove.</text>
+  <text x="300" y="530" font-family="monospace" font-size="22" fill="#64748b">npm install -g @aida-dev/cli</text>
+</svg>
