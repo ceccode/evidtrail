@@ -47,72 +47,89 @@ function escapeMarkdownTableCell(value: string): string {
 }
 
 function generatePRMarkdownReport(metrics: Metrics): string {
+  // The PR comment is read in three seconds, on every push, by someone who
+  // did not ask for it. The old version spent 42% of its words on caveats
+  // that were identical on every PR — which trains readers to skip them, so
+  // the one time a caveat matters it goes unread. Exception-driven instead:
+  // the normal state is one line, everything else is collapsed, and a
+  // caveat appears in the open only when it applies to THIS change set.
   const a = metrics.attribution;
-  const coveragePct = (a.coverage * 100).toFixed(1);
-  const filesTouched =
-    metrics.repo.persistence.filesConsidered + metrics.repo.persistence.filesExcluded;
+  const coveragePct = (a.coverage * 100).toFixed(0);
   const gaps = a.missingEvidence.commits;
+  const total = metrics.repo.commitsAuthored;
+  const sha = metrics.headSha.slice(0, 12) || 'empty repo';
+
+  const modeOrder = ['agent', 'assisted', 'autocomplete', 'none'] as const;
+  const modeSummary = modeOrder
+    .filter((mode) => a.modes[mode] > 0)
+    .map((mode) => `${mode === 'none' ? 'hand-written' : mode} ${a.modes[mode]}`)
+    .join(' · ');
+  const automatedNote =
+    metrics.repo.commitsAutomated > 0
+      ? ` (+${countLabel(metrics.repo.commitsAutomated, 'automated commit')})`
+      : '';
+
+  // One line that says everything the reader needs to decide whether to
+  // expand. Green when every commit carries provenance; a warning otherwise.
+  const verdict =
+    a.unknown === 0
+      ? `**AIDA** ✅ ${countLabel(total, 'commit')}${automatedNote} — ${modeSummary || 'no authored commits'} — every commit in this change set carries provenance.`
+      : `**AIDA** ⚠️ ${countLabel(total, 'commit')}${automatedNote} — **${countLabel(a.unknown, 'commit')} without provenance** (${coveragePct}% coverage)${modeSummary ? ` — ${modeSummary}` : ''}.`;
+
+  // The exception, in the open: which commits, and the one-line repair. A
+  // repository-wide prior never closes this gap, so it is named here when
+  // configured rather than left to quietly absorb the commits into a cohort.
   const gapRows = gaps
     .map(
       (commit) =>
         `| \`${commit.hash.slice(0, 12)}\` | ${escapeMarkdownTableCell(commit.subject)} |`
     )
     .join('\n');
-  const missingEvidenceSection =
+  const gapSection =
     gaps.length > 0
-      ? `### Commits missing provenance
-
-These commits contain no declaration or defensible inference. They remain \`unknown\` even when \`defaultMode\` is configured: a repository-wide prior is not evidence about an individual commit.
-
+      ? `
 | Commit | Subject |
 |---|---|
 ${gapRows}
-${a.missingEvidence.truncated ? `\nOnly the first ${gaps.length} are shown; ${a.unknown - gaps.length} more ${a.unknown - gaps.length === 1 ? 'commit has' : 'commits have'} no evidence.\n` : ''}
-
-For a commit genuinely produced by an agent, declare \`AI-Mode: agent\`. The human who reviews and runs \`git commit\` remains the Git author/committer; that is separate from how the content was produced.
+${a.missingEvidence.truncated ? `\n_Only the first ${gaps.length} shown; ${a.unknown - gaps.length} more without evidence._\n` : ''}
+For agent-produced work, declare \`AI-Mode: agent\` — install the hook in your clone with \`aida install-hooks\`, or add \`"prepare": "aida install-hooks --if-git"\` to \`package.json\` so every clone gets it. The reviewer who runs \`git commit\` stays the author; that is separate from how the content was produced.${
+          a.defaultMode !== null
+            ? `\n\n> \`defaultMode: ${a.defaultMode}\` is configured, but a repository-wide prior is not evidence about an individual commit: these stay \`unknown\` and coverage stays ${coveragePct}%.`
+            : ''
+        }
 `
-      : `### Provenance completeness
-
-Every commit in this change set carries attribution evidence.
-`;
-  const priorNote =
-    a.defaultMode !== null && a.evidence.none > 0
-      ? `\n> \`defaultMode: ${a.defaultMode}\` places missing-evidence commits in that analytical cohort, but does not increase the ${coveragePct}% evidence coverage or turn the assumption into a fact.\n`
       : '';
 
-  return `# AIDA PR Evidence Report
+  // Everything a curious reader might want, and nobody needs on every push.
+  const modeRows = [...modeOrder, 'unknown' as const]
+    .filter((mode) => a.modes[mode] > 0)
+    .map((mode) => `| ${mode === 'none' ? 'none (hand-written)' : mode} | ${a.modes[mode]} |`);
+  if (metrics.repo.commitsAutomated > 0) {
+    modeRows.push(`| _automated (no cohort)_ | ${metrics.repo.commitsAutomated} |`);
+  }
+  const filesTouched =
+    metrics.repo.persistence.filesConsidered + metrics.repo.persistence.filesExcluded;
 
-- **Repo:** ${metrics.repoPath}
-- **Default branch:** ${metrics.defaultBranch}
-- **Scope:** PR change set @ ${metrics.headSha.slice(0, 12) || 'empty repo'}
-- **Generated:** ${metrics.generatedAt}
+  const details = `
+<details>
+<summary>Details — scope, provenance, limits</summary>
 
-## Change Summary
+**Scope:** \`base..HEAD\` @ \`${sha}\` — ${countLabel(filesTouched, 'file')} touched. A change-set view, not repository history or deployed state; time-based signals (rapid retouch, trend) are omitted because a fresh PR has not had a comparable observation window.
 
-- ${countLabel(metrics.repo.commitsAuthored, 'authored commit')}
-- ${countLabel(metrics.repo.commitsAutomated, 'automated commit')}
-- ${countLabel(filesTouched, 'file')} touched
-
-This report describes the commits in \`base..HEAD\`, not the repository's integrated history or deployed production state. Temporal change metrics are intentionally omitted here: a new PR has not existed long enough for rapid-retouch rates or trends to be interpretable.
-
-## Observed Provenance
-
-**${coveragePct}% evidence coverage** — declared ${a.evidence.declared} · inferred ${a.evidence.inferred} · none ${a.evidence.none}.
+**Evidence:** ${coveragePct}% coverage — declared ${a.evidence.declared} · inferred ${a.evidence.inferred} · none ${a.evidence.none}.
 
 | Autonomy level | Commits |
 |---|---:|
-| agent | ${a.modes.agent} |
-| assisted | ${a.modes.assisted} |
-| autocomplete | ${a.modes.autocomplete} |
-| none (hand-written) | ${a.modes.none} |
-| unknown | ${a.modes.unknown} |
-| _automated (no cohort)_ | ${a.automated} |
-${priorNote}
-${missingEvidenceSection}
-## Interpretation Limits
+${modeRows.join('\n')}
 
+**Limits**
 ${metrics.caveats.map((caveat) => `- ${caveat}`).join('\n')}
+
+</details>
 `;
+
+  return `${verdict}
+${gapSection}${details}`;
 }
 
 function generateMarkdownReport(metrics: Metrics): string {
