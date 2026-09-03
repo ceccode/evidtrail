@@ -137,31 +137,47 @@
                     </div>
                     <div class="terminal-body">
                         <div class="terminal-line">
-                            <span class="prompt">$</span> aida collect --since 30d
+                            <span class="prompt">$</span> aida init
                         </div>
                         <div class="terminal-line output">
-                            ✓ Collected 247 commits
+                            + .aida.json &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;created — no prior
                         </div>
                         <div class="terminal-line output">
-                            ✓ Attribution: ai 71 · human 0 · automated 0 · unknown 176
+                            + commit hook &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;installed
+                        </div>
+                        <div class="terminal-line output">
+                            + package.json prepare &nbsp; &nbsp; &nbsp; &nbsp;created — aida install-hooks --if-git
+                        </div>
+                        <div class="terminal-line output">
+                            + .github/workflows/aida.yml &nbsp;created — PR comment, minimal permissions
                         </div>
                         <div class="terminal-line">
-                            <span class="prompt">$</span> aida analyze
+                            <span class="prompt">$</span> aida doctor
                         </div>
                         <div class="terminal-line output">
-                            ✓ Attribution coverage: 28.7% — cohort overlays are low-confidence
+                            ✓ clone depth &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; full history
                         </div>
                         <div class="terminal-line output">
-                            ✓ Repo rapid retouch (30d): 18.2% (8/44 eligible)
+                            ✓ commit hook (this clone) &nbsp;AI-Mode trailer will be stamped
+                        </div>
+                        <div class="terminal-line output">
+                            Ready: every check passed.
                         </div>
                         <div class="terminal-line">
-                            <span class="prompt">$</span> aida report
+                            <span class="prompt">$</span> aida --since 90d
                         </div>
                         <div class="terminal-line output">
-                            ✓ Reports generated in ./aida-output/
+                            Collected 77 commits · coverage 100.0% (agent 52, automated 25, unknown 0)
+                        </div>
+                        <div class="terminal-line output">
+                            Trend: fewer than two mature periods (30d window) — no comparison yet
+                        </div>
+                        <div class="terminal-line output">
+                            Reports written to ./aida-output/
                         </div>
                     </div>
                 </div>
+                <p class="demo-caption">Real output from this project's own repository. A young window says "no comparison yet" instead of inventing one.</p>
             </div>
         </section>
 
@@ -252,7 +268,7 @@
         <section id="ci" class="ci-integration">
             <div class="container">
                 <h2>CI/CD Integration</h2>
-                <p class="section-subtitle">Add the documented workflow to create a scoped report on every pull request. PR comments require explicit token permissions.</p>
+                <p class="section-subtitle">One step in your workflow. The action runs <code>aida doctor</code> first, so a shallow checkout is refused before it can produce a confidently wrong report.</p>
                 <div class="ci-example">
                     <div class="terminal">
                         <div class="terminal-header">
@@ -277,13 +293,16 @@
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> actions/checkout@v5</div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">with:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">fetch-depth:</span> 0</div>
-                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">run:</span> npm i -g @aida-dev/cli</div>
-                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">run:</span> aida collect --pr && aida analyze && aida report && aida comment</div>
-                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">env:</span></div>
-                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">GITHUB_TOKEN:</span> ${{ secrets.GITHUB_TOKEN }}</div>
+                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> ceccode/AIDA-Metrics@v1</div>
+                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">with:</span></div>
+                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">comment:</span> true</div>
                         </div>
                     </div>
                 </div>
+                <figure class="pr-comment">
+                    <img src="pr-comment.png" alt="AIDA PR comment on GitHub: one verdict line, every commit in this change set carries provenance, with a collapsed Details fold" width="800" height="132" loading="lazy">
+                    <figcaption>What lands on the pull request when every commit carries provenance: one line, details folded. When commits lack provenance the line turns to ⚠️ and names them, with the one-line repair.</figcaption>
+                </figure>
             </div>
         </section>
 
