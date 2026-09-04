@@ -1,6 +1,6 @@
 {
   "name": "@evidtrail/core",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Git collection, two-axis AI attribution (mode × evidence), and versioned schemas for evidtrail. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
   "type": "module",
   "main": "dist/index.js",
