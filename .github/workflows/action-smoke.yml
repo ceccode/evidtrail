@@ -1,0 +1,44 @@
+# Runs the composite action exactly as a consumer would (`uses: ./` is the
+# in-repo form of `uses: ceccode/evidtrail@v1`). Every other workflow here
+# calls the built binary directly, so until this existed the action itself —
+# preflight, npx-pinned CLI, scope detection, outputs — had never been
+# executed by CI. A launch that points people at `uses:` needs this green.
+name: action smoke test
+
+on:
+  pull_request:
+    paths:
+      - 'action.yml'
+      - '.github/workflows/action-smoke.yml'
+      - 'packages/cli/**'
+
+permissions:
+  contents: read
+
+jobs:
+  consumer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # comment: false — the repo's own workflow already posts the PR comment
+      # under the same marker; two writers would fight over one comment.
+      - id: evidtrail
+        uses: ./
+        with:
+          comment: false
+          out-dir: ./.smoke
+
+      - name: The action produced what it promises
+        env:
+          REPORT: ${{ steps.evidtrail.outputs.report }}
+          METRICS: ${{ steps.evidtrail.outputs.metrics }}
+        run: |
+          test -s "$REPORT" || { echo "no report at $REPORT"; exit 1; }
+          test -s "$METRICS" || { echo "no metrics at $METRICS"; exit 1; }
+          grep -q '^\*\*evidtrail\*\*' "$REPORT" || { echo "report lacks the verdict line"; head -5 "$REPORT"; exit 1; }
+          jq -e '.scope == "pr"' "$METRICS" >/dev/null || { echo "expected pr scope on a pull_request event"; jq '.scope' "$METRICS"; exit 1; }
+          echo "ok: $(head -1 "$REPORT")"
