@@ -1,6 +1,11 @@
 # @evidtrail/cli
 
-Command-line interface for evidtrail — an auditable evidence ledger for AI-assisted software development.
+Command-line interface and GitHub Action for evidtrail — AI provenance for git: declared at commit time, checked in CI, traceable to the agent session.
+
+- A commit hook writes `AI-Mode:` and `Assisted-by:` (the Linux kernel, Fedora and LLVM convention), and with `git config evidtrail.recordSession true` an `AI-Session:` link to the agent session.
+- `evidtrail verify` fails a pull request whose commits do not state how they were produced, like a DCO check for `Signed-off-by`.
+- `evidtrail trail <commit>` follows a commit to what it states and to its session, without opening the transcript.
+- The report opens with provenance; change signals (retouch, reverts, hotfixes, trend) follow as an appendix and are churn, not a quality score.
 
 ## Installation
 
@@ -31,7 +36,7 @@ evidtrail analyze
 evidtrail report
 ```
 
-This workflow stays local. It records repository change signals plus declared, inferred, and missing provenance; it does not infer productivity, defects, causality, or developer performance.
+This workflow stays local. It records declared, inferred, and missing provenance, plus repository change signals as an appendix; it does not infer productivity, defects, causality, or developer performance.
 
 To declare provenance for future commits, install the hook. Set `EVIDTRAIL_MODE` or configure a truthful `defaultMode` in `.evidtrail.json`; when no mode can be determined, evidtrail writes no trailer and preserves `unknown`.
 
@@ -55,6 +60,14 @@ Options:
 - `--default-branch <name>` - Default branch name (auto-detect if omitted)
 - `--out-dir <path>` - Output directory (default: ./evidtrail-output)
 - `--verbose` - Verbose logging
+
+#### `evidtrail verify`
+
+Fail (exit 1) when a commit in scope does not state its provenance. `--require declared` (default) accepts `AI-Mode:`, `Assisted-by:` or the attribution manifest; `--require evidence` accepts any signal. Automated commits are skipped, and a `defaultMode` prior never passes. Run it on a PR range (`evidtrail collect --pr`).
+
+#### `evidtrail trail [revs...]`
+
+Show what each commit states about how it was produced and, when it carries `AI-Session:`, whether that session's transcript exists on this machine. Read-only; it never opens the transcript.
 
 #### `evidtrail analyze`
 

@@ -1,16 +1,18 @@
 # evidtrail
 
-> An auditable ledger of AI provenance and change signals for git repositories — honest about what git can and cannot prove.
+> AI provenance for git: declared at commit time, checked in CI, traceable to the agent session. Honest about what git cannot prove.
 
-evidtrail (formerly AIDA Metrics) is an open-source CLI and GitHub Action. It reads git history and produces a versioned `metrics.json` and a Markdown report describing, per commit, the declared or inferred autonomy level of AI participation (`none`, `autocomplete`, `assisted`, `agent`, or `unknown`), how that is known (`declared`, `inferred`, or no evidence), and repository-level change signals: fixed-horizon rapid-retouch rates and their trend over time.
+evidtrail (formerly AIDA Metrics) is an open-source CLI and GitHub Action. It makes every commit state how it was produced, and checks that it did. A git hook writes the autonomy level (`AI-Mode:`) and the tool (`Assisted-by:`, the convention of the Linux kernel, Fedora and LLVM) at commit time, and, if the person opts in, the agent session the commit came from (`AI-Session:`). `evidtrail verify` fails a pull request whose commits state nothing, like a DCO check for `Signed-off-by`. The report opens with provenance: per commit, the autonomy level (`none`, `autocomplete`, `assisted`, `agent`, or `unknown`) and how that is known (`declared`, `inferred`, or no evidence). Repository change signals (fixed-horizon rapid retouch, reverts, hotfixes and their trend) follow as an appendix.
 
 ## What evidtrail is not
 
-evidtrail does not infer productivity, defects, deployment, causality, capitalization, or developer performance from git history. It does not estimate the value of software. "Accounting" here means keeping a traceable ledger of evidence, scope, assumptions, and outcomes.
+evidtrail does not infer productivity, defects, deployment, causality, capitalization, or developer performance from git history. It does not measure the quality of AI-written code: mistakes an agent makes and fixes inside its session never reach git, and churn says little about accuracy. It does not estimate the value of software.
 
 ## How evidence is produced
 
-- A `prepare-commit-msg` hook, installed once per clone (or via a `package.json` `prepare` script), detects agent sessions from their environment and stamps an `AI-Mode:` trailer. This needs no per-commit discipline.
+- A `prepare-commit-msg` hook, installed once per clone (or via a `package.json` `prepare` script), detects agent sessions from their environment and stamps `AI-Mode:` and `Assisted-by:` trailers. This needs no per-commit discipline.
+- `Assisted-by:` written by people is read as a declaration of AI involvement; the autonomy level stays `unknown` unless `AI-Mode:` states it.
+- With `git config evidtrail.recordSession true`, AI commits also carry `AI-Session: <agent>/<id>`. `evidtrail trail <commit>` finds the transcript locally and never opens it.
 - Tool co-author trailers (for example `Co-Authored-By: Claude`) are read as inferred evidence.
 - A commit with no signal stays `unknown`. It is never assumed to be human.
 - A configured `defaultMode` prior can place no-evidence commits in a cohort for analysis, but it never counts as evidence, never raises coverage, and is always labelled assumed. Cohort tables are withheld when every commit in them comes from the prior.
@@ -35,4 +37,6 @@ evidtrail does not infer productivity, defects, deployment, causality, capitaliz
 - `evidtrail init` — set up config, commit hook, prepare script, CI workflow (additive)
 - `evidtrail doctor` — preflight: clone depth, partial clone, config, hook, CI wiring
 - `evidtrail` — collect → analyze → report
+- `evidtrail verify` — fail when commits in scope do not state their provenance (exit 1), DCO-style
+- `evidtrail trail <commit>` — follow a commit to what it states and to its agent session
 - `evidtrail collect`, `evidtrail analyze`, `evidtrail report`, `evidtrail blame`, `evidtrail fetch-prs`, `evidtrail comment`, `evidtrail install-hooks`

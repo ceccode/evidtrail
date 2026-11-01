@@ -4,7 +4,7 @@ Instructions for AI coding agents working on this repository. Humans: see [READM
 
 ## What this project is
 
-evidtrail measures AI-assisted development from git history. Its whole value is that the numbers are **honest**, so the bar for a change here is not "does it work" but "can this number mislead someone who trusts it".
+evidtrail makes every commit state how it was produced: a hook writes `AI-Mode:` and `Assisted-by:` at commit time, `evidtrail verify` checks it in CI, and an opt-in `AI-Session:` trailer links a commit to its agent session. The report opens with that provenance; change signals from git history (retouch, reverts, hotfixes, trend) follow as an appendix and do not measure code quality. Its whole value is that the numbers are **honest**, so the bar for a change here is not "does it work" but "can this number mislead someone who trusts it".
 
 The guiding principle, learned the hard way: **a metric must never induce a wrong conclusion from arithmetically correct numbers.** An entire metric (merge ratio) was deleted rather than shipped misleading, and every external validation round has found a bug of exactly this shape.
 

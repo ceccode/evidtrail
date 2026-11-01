@@ -1,5 +1,5 @@
 name: evidtrail
-description: Auditable AI provenance and change signals for your git repository — posts an evidence comment on pull requests.
+description: AI provenance for your git repository — a PR comment, and an optional check that every commit states how it was produced.
 author: ceccode
 branding:
   icon: check-square
