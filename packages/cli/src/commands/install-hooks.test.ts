@@ -22,6 +22,9 @@ const DETECTION_VARS = [
   'CLAUDECODE',
   'CLAUDE_CODE_ENTRYPOINT',
   'CURSOR_TRACE_ID',
+  'CLAUDE_CODE_SESSION_ID',
+  'EVIDTRAIL_SESSION',
+  'EVIDTRAIL_RECORD_SESSION',
 ];
 
 function git(cmd: string, env: Record<string, string> = {}) {
@@ -329,6 +332,66 @@ describe('the installed hook, running for real', () => {
       });
       expect(lastMessage().match(/Assisted-by:/g)).toHaveLength(1);
       expect(lastMessage()).toContain('AI-Mode: agent');
+    });
+  });
+
+  // The session trailer is opt-in, per person: a public history keeps every
+  // id forever, and the sessions are the person's, not the repository's.
+  // Without the opt-in the hook must write nothing, even when it can see an
+  // id; with it, only AI commits get one, and only a filename-safe id.
+  describe('AI-Session (opt-in)', () => {
+    const SID = '3a083123-96c6-48b5-86fe-52c9dbe942f6';
+    function lastMessage(): string {
+      return execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
+    }
+    function optIn() {
+      git('git config evidtrail.recordSession true');
+    }
+
+    it('writes nothing without the opt-in, even when an id is visible', () => {
+      git('git commit -q --allow-empty -m "feat: x"', { CLAUDECODE: '1', CLAUDE_CODE_SESSION_ID: SID });
+      expect(lastMessage()).not.toContain('AI-Session');
+    });
+
+    it('links an AI commit to its Claude Code session, and collect reads it', async () => {
+      optIn();
+      git('git commit -q --allow-empty -m "feat: x"', { CLAUDECODE: '1', CLAUDE_CODE_SESSION_ID: SID });
+      expect(lastMessage()).toContain(`AI-Session: claude-code/${SID}`);
+
+      const outDir = mkdtempSync(join(tmpdir(), 'evidtrail-hooks-out-'));
+      try {
+        await run(createCollectCommand(), ['--repo', repoPath, '--out-dir', outDir]);
+        const stream = JSON.parse(readFileSync(join(outDir, 'commit-stream.json'), 'utf-8'));
+        expect(stream.commits[0].session).toEqual({ agent: 'claude-code', id: SID });
+      } finally {
+        rmSync(outDir, { recursive: true, force: true });
+      }
+    });
+
+    it('does not link a commit declared hand-written', () => {
+      optIn();
+      git('git commit -q --allow-empty -m "fix: by hand"', {
+        CLAUDECODE: '1',
+        CLAUDE_CODE_SESSION_ID: SID,
+        EVIDTRAIL_MODE: 'none',
+      });
+      expect(lastMessage()).not.toContain('AI-Session');
+    });
+
+    it('takes EVIDTRAIL_SESSION for other agents and refuses unsafe ids', () => {
+      git('git commit -q --allow-empty -m "feat: a"', {
+        EVIDTRAIL_MODE: 'agent',
+        EVIDTRAIL_RECORD_SESSION: '1',
+        EVIDTRAIL_SESSION: 'codex/run-42',
+      });
+      expect(lastMessage()).toContain('AI-Session: codex/run-42');
+
+      git('git commit -q --allow-empty -m "feat: b"', {
+        EVIDTRAIL_MODE: 'agent',
+        EVIDTRAIL_RECORD_SESSION: '1',
+        EVIDTRAIL_SESSION: 'codex/../../etc',
+      });
+      expect(lastMessage()).not.toContain('AI-Session');
     });
   });
 

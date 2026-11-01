@@ -89,12 +89,44 @@ evidtrail_stamp_mode() {
       ;;
   esac
 
+  # Opt-in per person, via \`git config evidtrail.recordSession true\` or
+  # EVIDTRAIL_RECORD_SESSION=1: point an AI commit at the agent session that
+  # produced it. Not a .evidtrail.json key: these are your sessions, and
+  # older evidtrail versions reject unknown keys there. EVIDTRAIL_SESSION
+  # takes "<agent>/<id>" for agents the hook cannot detect. Only
+  # filename-safe ids are written.
+  session_line=""
+  case "$mode" in
+    autocomplete|assisted|agent)
+      record="$EVIDTRAIL_RECORD_SESSION"
+      if [ "$record" != "1" ] && \\
+        [ "$(git config --bool --get evidtrail.recordSession 2>/dev/null)" = "true" ]; then
+        record=1
+      fi
+      if [ "$record" = "1" ] && ! grep -qiE '^AI-Session:' "$msg_file"; then
+        session="$EVIDTRAIL_SESSION"
+        if [ -z "$session" ] && [ -n "$CLAUDE_CODE_SESSION_ID" ]; then
+          session="claude-code/$CLAUDE_CODE_SESSION_ID"
+        fi
+        case "$session" in
+          */.|*/..|./*|../*) session="" ;;
+        esac
+        if printf '%s' "$session" | grep -qE '^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$'; then
+          session_line="AI-Session: $session"
+        fi
+      fi
+      ;;
+  esac
+
   # Comment lines are stripped by git; append before them so the trailer
   # survives into the final message.
   if [ -n "$assisted_line" ]; then
     printf '\\nAI-Mode: %s\\n%s\\n' "$mode" "$assisted_line" >> "$msg_file"
   else
     printf '\\nAI-Mode: %s\\n' "$mode" >> "$msg_file"
+  fi
+  if [ -n "$session_line" ]; then
+    printf '%s\\n' "$session_line" >> "$msg_file"
   fi
 }
 

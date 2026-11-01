@@ -11,6 +11,8 @@ export * from './git/log.js';
 export * from './tags/ai-tags.js';
 export * from './tags/attribution-manifest.js';
 export * from './tags/automated.js';
+export * from './tags/provenance.js';
+export * from './tags/session.js';
 export * from './tags/redact.js';
 export * from './io/fs.js';
 export * from './utils/dates.js';

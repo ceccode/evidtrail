@@ -116,7 +116,7 @@ For agent-produced work, declare \`AI-Mode: agent\` — install the hook in your
 
 **Scope:** \`base..HEAD\` @ \`${sha}\` — ${countLabel(filesTouched, 'file')} touched. A change-set view, not repository history or deployed state; time-based signals (rapid retouch, trend) are omitted because a fresh PR has not had a comparable observation window.
 
-**Evidence:** ${coveragePct}% coverage — declared ${a.evidence.declared} · inferred ${a.evidence.inferred} · none ${a.evidence.none}.
+**Evidence:** ${coveragePct}% coverage — declared ${a.evidence.declared} · inferred ${a.evidence.inferred} · none ${a.evidence.none}.${a.sessions && a.sessions.linked > 0 ? ` ${countLabel(a.sessions.linked, 'AI commit')} linked to an agent session; \`evidtrail trail <commit>\` follows one.` : ''}
 
 | Autonomy level | Commits |
 |---|---:|
@@ -507,6 +507,10 @@ ${trendSection}
 ${
   a.aiModeUnknown
     ? `\nOf the ${a.ai} AI commits, **${a.aiModeUnknown} carry a signal of AI involvement but no autonomy level**: coverage counts them, the table below counts them as \`unknown\`. Full coverage is not full knowledge of how the code was produced.\n`
+    : ''
+}${
+  a.sessions && a.sessions.linked > 0
+    ? `\n**${a.sessions.linked} of the ${a.ai} AI commits link to an agent session** (${a.sessions.distinct} distinct). Git holds what each session committed; the session holds what was tried and fixed before that. \`evidtrail trail <commit>\` follows a commit to its transcript when the transcript is on this machine. evidtrail reads nothing from the sessions.\n`
     : ''
 }${recentLine}${coverageWarning}
 | Autonomy level | Commits |

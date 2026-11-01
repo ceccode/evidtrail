@@ -257,3 +257,20 @@ describe('PR-scoped evidence report', () => {
     expect(warnings).not.toContain('No baseline cohort');
   });
 });
+
+describe('session links in the report', () => {
+  it('says how many AI commits link to a session, and says nothing when none do', async () => {
+    git('git commit -q --allow-empty -m "feat: a" -m "AI-Mode: agent" -m "AI-Session: claude-code/s-1"');
+    git('git commit -q --allow-empty -m "feat: b" -m "AI-Mode: agent" -m "AI-Session: claude-code/s-1"');
+    git('git commit -q --allow-empty -m "feat: c" -m "AI-Mode: agent"');
+    const { report } = await pipeline();
+    expect(report).toContain('**2 of the 3 AI commits link to an agent session** (1 distinct)');
+    expect(report).toContain('evidtrail reads nothing from the sessions');
+  });
+
+  it('prints no session line on a repo that records none', async () => {
+    git('git commit -q --allow-empty -m "feat: a" -m "AI-Mode: agent"');
+    const { report } = await pipeline();
+    expect(report).not.toContain('agent session');
+  });
+});

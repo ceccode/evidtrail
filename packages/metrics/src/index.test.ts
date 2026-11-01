@@ -702,3 +702,23 @@ describe('aiModeUnknown', () => {
     expect(metrics.attribution.modes.unknown).toBe(2);
   });
 });
+
+describe('attribution.sessions', () => {
+  // The report prints "N of the M AI commits link to an agent session". If a
+  // session on a non-AI commit counted, N could include commits M does not,
+  // and the sentence would compare two different sets.
+  it('counts AI commits with a session, and distinct sessions, never other commits', () => {
+    const session = (id: string) => ({ agent: 'claude-code', id });
+    const human: Commit['tags'] = { attribution: 'human', automated: false, mode: 'none', evidence: 'declared', level: 'none', sources: ['trailer:AI-Mode'] };
+    const metrics = calculateMetrics(
+      makeStream([
+        makeCommit({ hash: 'a1', tags: aiTags, session: session('s1') }),
+        makeCommit({ hash: 'a2', tags: aiTags, session: session('s1') }),
+        makeCommit({ hash: 'a3', tags: aiTags, session: session('s2') }),
+        makeCommit({ hash: 'a4', tags: aiTags }),
+        makeCommit({ hash: 'h1', tags: human, session: session('s3') }),
+      ])
+    );
+    expect(metrics.attribution.sessions).toEqual({ linked: 3, distinct: 2 });
+  });
+});

@@ -14,6 +14,7 @@ import { createInitCommand } from './commands/init.js';
 import { createDoctorCommand } from './commands/doctor.js';
 import { createRunCommand } from './commands/run.js';
 import { createVerifyCommand } from './commands/verify.js';
+import { createTrailCommand } from './commands/trail.js';
 
 // Report the real package version: a hardcoded '0.0.0' left users unable to
 // tell which build they were running.
@@ -46,6 +47,7 @@ program.addCommand(createCommentCommand());
 program.addCommand(createInitCommand());
 program.addCommand(createDoctorCommand());
 program.addCommand(createVerifyCommand());
+program.addCommand(createTrailCommand());
 // Default subcommand: `evidtrail --since 90d` runs the pipeline. See run.ts for why
 // this is a subcommand and not root options.
 program.addCommand(createRunCommand(), { isDefault: true });
