@@ -256,7 +256,7 @@ Fail when collected commits do not state their provenance. It reads the stream `
 
 ```bash
 evidtrail collect --diff-base origin/main
-evidtrail verify                     # every commit declares: AI-Mode or the manifest
+evidtrail verify                     # every commit declares: AI-Mode, Assisted-by or the manifest
 evidtrail verify --require evidence  # any signal at all, a co-author line included
 ```
 

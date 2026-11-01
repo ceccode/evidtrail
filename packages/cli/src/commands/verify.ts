@@ -13,8 +13,8 @@ import { join } from 'path';
 // spirit of the DCO check for Signed-off-by. It reads the stream `collect`
 // wrote, so the range is whatever `collect --pr` or `--diff-base` resolved.
 //
-// What passes is a statement about the commit itself: an AI-Mode trailer
-// or the attribution manifest. `AI-Mode: none` passes
+// What passes is a statement about the commit itself: an AI-Mode or
+// Assisted-by trailer, or the attribution manifest. `AI-Mode: none` passes
 // too: the check asks that provenance be stated, not that it be AI. A
 // `defaultMode` prior never passes, because collect does not apply it and
 // a repository setting is not a statement about one commit.
@@ -81,8 +81,8 @@ export function formatVerifyResult(result: VerifyResult, require: Requirement, s
     lines.push(
       '',
       require === 'declared'
-        ? 'Declare each commit with an `AI-Mode:` trailer (`evidtrail install-hooks` writes it) or an entry in evidtrail-attribution.json. `AI-Mode: none` is a valid declaration for hand-written work.'
-        : 'Each of these commits has no AI-Mode, co-author or tool signal at all.'
+        ? 'Declare each commit with an `AI-Mode:` trailer (`evidtrail install-hooks` writes it), an `Assisted-by:` trailer, or an entry in evidtrail-attribution.json. `AI-Mode: none` is a valid declaration for hand-written work.'
+        : 'Each of these commits has no AI-Mode, Assisted-by, co-author or tool signal at all.'
     );
   }
   if (scope !== 'pr') {
@@ -100,7 +100,7 @@ export function createVerifyCommand(): Command {
     .option('--out-dir <path>', 'Directory holding commit-stream.json', './evidtrail-output')
     .option(
       '--require <level>',
-      'declared: every commit carries AI-Mode or a manifest entry; evidence: any signal at all',
+      'declared: every commit carries AI-Mode, Assisted-by or a manifest entry; evidence: any signal at all',
       'declared'
     )
     .option('--verbose', 'Verbose logging', false)

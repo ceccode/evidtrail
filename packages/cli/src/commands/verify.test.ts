@@ -53,8 +53,10 @@ describe('verifyStream', () => {
     // `AI-Mode: none` would punish the one honest declaration of a human.
     git('git commit -q --allow-empty -m "feat: a" -m "AI-Mode: agent"');
     git('git commit -q --allow-empty -m "fix: b" -m "AI-Mode: none"');
+    // The disclosure the kernel, Fedora and LLVM ask for is a declaration too
+    git('git commit -q --allow-empty -m "fix: c" -m "Assisted-by: Codex"');
     const result = verifyStream(await collect(), 'declared');
-    expect(result.checked).toBe(2);
+    expect(result.checked).toBe(3);
     expect(result.failures).toEqual([]);
   });
 

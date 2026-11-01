@@ -29,7 +29,7 @@ inputs:
     required: false
     default: 'true'
   require-provenance:
-    description: "Fail the job on a pull request when a commit does not state its provenance. `declared` requires AI-Mode or the manifest; `evidence` accepts any signal. Empty (default) never fails."
+    description: "Fail the job on a pull request when a commit does not state its provenance. `declared` requires AI-Mode, Assisted-by or the manifest; `evidence` accepts any signal. Empty (default) never fails."
     required: false
     default: ''
   out-dir:
