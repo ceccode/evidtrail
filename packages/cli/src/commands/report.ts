@@ -147,7 +147,7 @@ function generateMarkdownReport(metrics: Metrics): string {
   const warnOnRecent = a.recent ? a.recent.belowThreshold : a.belowThreshold;
 
   const coverageWarning = warnOnRecent
-    ? `\n> ⚠️ **Coverage is below ${(a.coverageThreshold * 100).toFixed(0)}%${a.recent ? ` in the last ${a.recent.windowDays} days` : ''}.** The sections from here down depend on attribution evidence and are low-confidence — Repository Change Signals above is unaffected, because it needs no attribution evidence. Install the commit hook (\`evidtrail install-hooks\`) so new commits declare their autonomy mode, or set \`defaultMode\` in \`.evidtrail.json\` for the history that predates it.\n`
+    ? `\n> ⚠️ **Coverage is below ${(a.coverageThreshold * 100).toFixed(0)}%${a.recent ? ` in the last ${a.recent.windowDays} days` : ''}.** The table below and the per-autonomy comparisons under Change Signals depend on this evidence and are low-confidence. The repository-level rows do not need it. Install the commit hook (\`evidtrail install-hooks\`) so new commits declare their autonomy mode, or set \`defaultMode\` in \`.evidtrail.json\` for the history that predates it.\n`
     : '';
 
   const priorNote =
@@ -179,7 +179,7 @@ function generateMarkdownReport(metrics: Metrics): string {
     ? (() => {
         const ai30 = rapidRetouch(metrics.persistence, 30);
         const baseline30 = rapidRetouch(metrics.baseline.persistence, 30);
-        return `## AI vs Baseline
+        return `### AI vs Baseline
 
 Fixed-horizon outcomes compare like with like: files too recent to have reached day 30 are excluded from both denominators and reported separately.
 
@@ -190,7 +190,7 @@ Fixed-horizon outcomes compare like with like: files too recent to have reached 
 | Too recent for 30d | ${ai30?.tooRecent ?? '—'} | ${baseline30?.tooRecent ?? '—'} | — |
 `;
       })()
-    : `## AI vs Baseline
+    : `### AI vs Baseline
 
 ${
       metrics.baseline && metrics.delta
@@ -238,7 +238,7 @@ ${categoryRows.join('\n')}
   // column speaks for itself, as it did before this gate existed.
   const fairnessSection = !(aiCohortHasEvidence || baselineHasEvidence)
     ? ''
-    : `## Cohort Fairness
+    : `### Cohort Fairness
 
 Persistence comparisons are only meaningful between cohorts of similar **age** and **task mix**.
 
@@ -272,7 +272,7 @@ ${byCategorySection}`;
   const hasAnyCohort = modeOrder.some((mode) => metrics.byMode[mode] !== null);
   const byModeSection =
     modeRows.length > 0
-      ? `## By Autonomy Level
+      ? `### By Autonomy Level
 
 The comparison that stays meaningful when everything is AI-assisted: how often code is touched again, per autonomy level (automated commits excluded).
 
@@ -288,18 +288,18 @@ ${modeRows.join('\n')}
 
 `
       : hasAnyCohort
-        ? `## By Autonomy Level
+        ? `### By Autonomy Level
 
 **Withheld** — every autonomy cohort in this repo exists only because of the \`${a.defaultMode}\` prior${gatedModes.length > 0 ? ` (${gatedModes.join(', ')})` : ''}: not one commit carries evidence of the level it was written at, so a table here would be the assumption describing itself. The cohorts are still in \`metrics.json\` for anyone who wants the prior's view.
 
-Install the commit hook (\`evidtrail install-hooks\`) so commits declare their own mode — see Data Quality below.
+Install the commit hook (\`evidtrail install-hooks\`) so commits declare their own mode — see Provenance above.
 
 `
         : '';
 
   const ls = metrics.lineSurvival;
   const lineSection = ls
-    ? `## Line Survival
+    ? `### Line Survival
 
 Exact per-line attribution from \`git blame\` — of the code alive in the collected tree, which observed commit last wrote it. Unlike file-level metrics, one AI line no longer marks a whole file. The \`defaultMode\` prior is never applied here: an assumption cannot relabel living lines.${ls.truncated ? '\n\n> ⚠️ Capped sample (`--max-files`): an evenly spaced slice of the tree, not the whole tree.' : ''}
 
@@ -342,7 +342,7 @@ Approximate survival of AI-introduced lines: **${(ls.approxSurvivalRate * 100).t
   const hotfixRows = oc.hotfixes.linked > 0 ? outcomeRows(oc.hotfixes.rates) : [];
   const outcomeSection =
     revertRows.length > 0 || hotfixRows.length > 0
-      ? `## Outcome Correlation
+      ? `### Outcome Correlation
 
 Reverts and hotfix-pattern commits, linked back to the attribution of the commit(s) they respond to — scoped to what git itself can answer (no incidents, no SAST).
 
@@ -350,7 +350,7 @@ Reverts and hotfix-pattern commits, linked back to the attribution of the commit
 ${
   revertRows.length > 0
     ? `
-### Reverted commits (${oc.reverts.resolved} of ${oc.reverts.total} reverts resolved to a target)
+#### Reverted commits (${oc.reverts.resolved} of ${oc.reverts.total} reverts resolved to a target)
 
 | Cohort of the reverted commit | Count | Share of reverts | Share of commits | Ratio |
 |---|---:|---:|---:|---:|
@@ -360,7 +360,7 @@ ${revertRows.join('\n')}
 }${
   hotfixRows.length > 0
     ? `
-### Hotfix antecedents (${oc.hotfixes.linked} of ${oc.hotfixes.total} hotfixes linked, ${oc.hotfixes.windowDays}d window)
+#### Hotfix antecedents (${oc.hotfixes.linked} of ${oc.hotfixes.total} hotfixes linked, ${oc.hotfixes.windowDays}d window)
 
 | Cohort of the antecedent | Count | Share of hotfixes | Share of commits | Ratio |
 |---|---:|---:|---:|---:|
@@ -377,7 +377,7 @@ ${hotfixRows.join('\n')}
     return `| ${label} | ${stats.total} | ${stats.merged} | ${stats.closed} | ${(stats.acceptanceRate * 100).toFixed(1)}% |`;
   }
   const prSection = acc
-    ? `## PR Merge Outcome
+    ? `### PR Merge Outcome
 
 Merged vs closed-unmerged in the ${acc.provider} API. This is an observable repository outcome, not proof of review quality, deployment, or business acceptance.${acc.truncated ? '\n\n> ⚠️ Partial data: the PR window or at least one commit list was capped.' : ''}
 
@@ -398,10 +398,9 @@ ${[
 `
     : '';
 
-  // Repository Change Signals opens the report: the repo-level block from
-  // step 1, rendered first because it is the only view that needs no
-  // attribution evidence — valid at 0% coverage, untouched by the prior.
-  // It also replaces the old "Persistence (file-level survival)" section,
+  // The repository block opens Change Signals because it is the only view
+  // there that needs no attribution evidence: valid at 0% coverage,
+  // untouched by the prior. It also replaces the old "Persistence (file-level survival)" section,
   // which rendered the AI cohort's numbers under a generic-looking heading —
   // the same defect class as the assumed-cohort and automated-mode bugs:
   // cohort data wearing a repo-level label.
@@ -456,7 +455,7 @@ ${[
   const trendSection =
     tr.periods.length > 0
       ? `
-### Trend (${tr.granularity}ly, ${tr.observationDays}-day observation window)
+#### Trend (${tr.granularity}ly, ${tr.observationDays}-day observation window)
 
 ${trendHeadline}
 
@@ -467,7 +466,7 @@ Every period is measured through the same ${tr.observationDays}-day window, so n
 ${trendRows.join('\n')}
 ${immature > 0 ? `\n*(immature)* — Too recent to judge: the period has not been over for the full ${tr.observationDays}-day window, so its files have had less time to be reworked than every period above. Shown for completeness, excluded from the comparison — otherwise every report would find quality declining.\n` : ''}`
       : '';
-  const codeQualitySection = `## Repository Change Signals
+  const codeQualitySection = `### Repository
 
 How files change again, as a property of the **repo** — measured over all ${rq.commitsAuthored} authored commits (${rq.commitsAutomated} automated excluded). No attribution evidence required: these numbers do not move with coverage or with the \`defaultMode\` prior.
 
@@ -482,24 +481,34 @@ ${trendSection}
 `;
 
   const baselineDetail = metrics.baseline && baselineHasEvidence
-    ? `## ${baselineLabel}
+    ? `### ${baselineLabel}
 - Commits considered: ${metrics.baseline.persistence.commitsConsidered}; rapid retouch within 30d: ${formatRetouch(rapidRetouch(metrics.baseline.persistence, 30))}
 
 `
     : '';
 
+  // Provenance leads. It is the part of this report git can actually
+  // answer: what each commit states about how it was produced. Change
+  // signals follow, with their limit stated first: mistakes an agent finds
+  // and fixes inside its session never reach git. Before this ordering the
+  // report opened on a retouch rate and its trend, and readers took the
+  // first number they saw as the verdict on AI-written code.
   return `# evidtrail Report
 
-**Repo:** ${metrics.repoPath}  
-**Default branch:** ${metrics.defaultBranch}  
+**Repo:** ${metrics.repoPath}
+**Default branch:** ${metrics.defaultBranch}
 **Scope:** ${metrics.scope} @ ${metrics.headSha.slice(0, 12) || 'empty repo'}
-**Window:** ${metrics.window.since || 'beginning'} → ${metrics.window.until || 'now'}  
+**Window:** ${metrics.window.since || 'beginning'} → ${metrics.window.until || 'now'}
 **Generated:** ${metrics.generatedAt}
 
-${codeQualitySection}${lineSection}${outcomeSection}${prSection}## Autonomy
+## Provenance
 
-The lens over the repository signals above: **at what level of AI autonomy** the code was written. Everything from here down depends on attribution evidence — see Data Quality below for how much of it this repo has.
-${coverageWarning}
+**${coveragePct}% of commits carry provenance evidence** — declared ${a.evidence.declared} · inferred ${a.evidence.inferred} · none ${a.evidence.none} (${unknownPct}%). *Declared* means the commit states it, in a trailer or the attribution manifest. *Inferred* means evidtrail concluded it from a co-author or a tool name. A commit with no evidence is not evidence of a human.
+${
+  a.aiModeUnknown
+    ? `\nOf the ${a.ai} AI commits, **${a.aiModeUnknown} carry a signal of AI involvement but no autonomy level**: coverage counts them, the table below counts them as \`unknown\`. Full coverage is not full knowledge of how the code was produced.\n`
+    : ''
+}${recentLine}${coverageWarning}
 | Autonomy level | Commits |
 |---|---:|
 | agent | ${a.modes.agent} |
@@ -511,16 +520,12 @@ ${coverageWarning}
 
 *Three-state view:* ai ${a.ai} · human ${a.human} · automated ${a.automated} · unknown ${a.unknown} — a projection of the table above, kept for a one-word headline.
 ${priorNote}
-${byModeSection}${comparisonSection}
-${fairnessSection}${baselineDetail}## Data Quality
+## Change Signals
 
-**${coveragePct}% of commits carry attribution evidence** — declared ${a.evidence.declared} · inferred ${a.evidence.inferred} · none ${a.evidence.none} (${unknownPct}%). Evidence gates the autonomy sections above, never repository-level change signals.
-${
-  a.aiModeUnknown
-    ? `\nOf the ${a.ai} AI commits, **${a.aiModeUnknown} carry a tool signal but no autonomy level**: coverage counts them as evidence of involvement, the autonomy sections count them as \`unknown\`. Full coverage is not full knowledge of how the code was produced.\n`
-    : ''
-}${recentLine}
-### Caveats
+What git records after a commit: files touched again, lines still alive, reverts, hotfixes, merged pull requests. These are churn signals, not a quality score. Mistakes an agent makes and fixes inside its session never reach git, so they leave no trace here, and a rate that moves says the work changed, not why. Read them as places to look closer.
+
+${codeQualitySection}${lineSection}${outcomeSection}${prSection}${byModeSection}${comparisonSection}
+${fairnessSection}${baselineDetail}## Caveats
 ${metrics.caveats.map((caveat) => `- ${caveat}`).join('\n')}
 `;
 }

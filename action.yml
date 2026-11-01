@@ -28,6 +28,10 @@ inputs:
     description: Replace author identities with a per-run salted hash before anything leaves the runner.
     required: false
     default: 'true'
+  require-provenance:
+    description: "Fail the job on a pull request when a commit does not state its provenance. `declared` requires AI-Mode, Assisted-by or the manifest; `evidence` accepts any signal. Empty (default) never fails."
+    required: false
+    default: ''
   out-dir:
     description: Where commit-stream.json, metrics.json and report.md are written.
     required: false
@@ -90,3 +94,12 @@ runs:
         else
           printf '%s' "$payload" | gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --input -
         fi
+
+    - name: Require provenance
+      if: inputs.require-provenance != '' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        OUT: ${{ inputs.out-dir }}
+        REQUIRE: ${{ inputs.require-provenance }}
+        CLI: "@evidtrail/cli@${{ inputs.cli-version }}"
+      run: npx --yes "$CLI" verify --out-dir "$OUT" --require "$REQUIRE"

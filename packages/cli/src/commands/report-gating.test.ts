@@ -27,8 +27,10 @@ function section(report: string, heading: string): string {
   const start = report.indexOf(heading);
   if (start === -1) return '';
   const rest = report.slice(start + heading.length);
-  const end = rest.indexOf('\n## ');
-  return end === -1 ? rest : rest.slice(0, end);
+  // A section ends at the next heading of level 2 or 3: overlays are
+  // level-3 sections under Change Signals.
+  const match = rest.match(/\n#{2,3} /);
+  return match?.index === undefined ? rest : rest.slice(0, match.index);
 }
 
 function run(command: Command, args: string[]): Promise<Command> {
@@ -82,16 +84,16 @@ describe('overlay gating (#77 step 4)', () => {
 
     // ...but no overlay row is rendered from it. Scoped to the overlay: the
     // observed table above legitimately shows `agent 0`, which is the truth.
-    expect(section(report, '## By Autonomy Level')).not.toMatch(/\| agent \|/);
+    expect(section(report, '### By Autonomy Level')).not.toMatch(/\| agent \|/);
     // Withheld with a reason, not silently dropped: a configured prior doing
     // nothing is itself worth telling the reader about
     expect(report).toContain('**Withheld**');
     expect(report).toContain('the assumption describing itself');
-    expect(report).not.toContain('## Cohort Fairness');
+    expect(report).not.toContain('### Cohort Fairness');
 
     // Repo-level quality is untouched by the gate: it never needed evidence
-    expect(report).toContain('## Repository Change Signals');
-    expect(report).toContain('### Trend');
+    expect(report).toContain('### Repository');
+    expect(report).toContain('#### Trend');
   });
 
   it('renders the overlay as soon as one commit carries real evidence', async () => {
@@ -104,7 +106,7 @@ describe('overlay gating (#77 step 4)', () => {
 
     // One real agent commit backs the cohort, so it is shown — with the
     // prior's contribution still labelled
-    expect(section(report, '## By Autonomy Level')).toMatch(/\| agent \|/);
+    expect(section(report, '### By Autonomy Level')).toMatch(/\| agent \|/);
     expect(report).toContain('assumed)');
   });
 
@@ -132,7 +134,7 @@ describe('overlay gating (#77 step 4)', () => {
     // No prior at all: everything stays unknown
     const { report } = await pipeline();
 
-    expect(section(report, '## By Autonomy Level')).toMatch(/\| unknown \|/);
+    expect(section(report, '### By Autonomy Level')).toMatch(/\| unknown \|/);
     expect(report).not.toContain('**Comparison withheld**');
   });
 });
@@ -243,9 +245,9 @@ describe('PR-scoped evidence report', () => {
 
     // A one-commit PR is necessarily too young for time-to-next-touch
     // metrics. Showing 0/0 tables looked precise while saying nothing.
-    expect(report).not.toContain('## Repository Change Signals');
-    expect(report).not.toContain('### Trend');
-    expect(report).not.toContain('## AI vs Baseline');
+    expect(report).not.toContain('## Change Signals');
+    expect(report).not.toContain('#### Trend');
+    expect(report).not.toContain('### AI vs Baseline');
     expect(report).not.toContain("run 'evidtrail fetch-prs'");
 
     const info = vi.mocked(console.log).mock.calls.flat().join('\n');
