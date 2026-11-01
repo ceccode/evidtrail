@@ -1,6 +1,6 @@
 {
   "name": "@evidtrail/core",
-  "version": "1.3.1",
+  "version": "2.0.0",
   "description": "Git collection, two-axis AI provenance (mode × evidence), Assisted-by and AI-Session trailers, and versioned schemas for evidtrail. AI provenance for git: declared at commit time, checked in CI, traceable to the agent session. Honest about what git cannot prove.",
   "type": "module",
   "main": "dist/index.js",
