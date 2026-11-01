@@ -41,7 +41,7 @@ The first three are questions git can answer, and they lead the report. The last
 
 ### What evidtrail is not
 
-evidtrail does **not** infer productivity, defects, deployment, causality, capitalization, or developer performance from Git history. It does not measure the quality of AI-written code either: most of an agent's mistakes are found and fixed inside its session, before anything is committed, so they leave no trace in history ([Between the Commits](https://arxiv.org/abs/2609.29744) shows this on a codebase written entirely by Claude). It does not estimate the value of software. Any number in a report is bounded by what the repository can actually establish, and the report says so next to the number.
+evidtrail does **not** infer productivity, defects, deployment, causality, capitalization, or developer performance from Git history. It does not measure the quality of AI-written code either: mistakes an agent finds and fixes inside its session, before anything is committed, leave no trace in history ([Between the Commits](https://arxiv.org/abs/2609.29744) shows this on a codebase written entirely by Claude). It does not estimate the value of software. Any number in a report is bounded by what the repository can actually establish, and the report says so next to the number.
 
 ### Renamed from AIDA Metrics
 

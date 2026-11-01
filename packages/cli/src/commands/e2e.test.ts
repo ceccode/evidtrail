@@ -103,8 +103,8 @@ describe('collect → analyze → report end to end', () => {
     // Provenance first. #77 step 2 opened the report on the repository
     // retouch rate because it needs no attribution evidence. In practice
     // readers took that first number, and its trend, as the verdict on
-    // AI-written code, which git cannot give: an agent's mistakes are mostly
-    // fixed inside its session. So the section git can answer leads, and
+    // AI-written code, which git cannot give: mistakes an agent fixes inside
+    // its session never reach history. So the section git can answer leads, and
     // every churn signal sits under Change Signals with that limit stated.
     expect(report).toContain('## Provenance');
     expect(report).toContain('## Change Signals');
