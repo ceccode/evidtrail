@@ -368,6 +368,22 @@ describe('the installed hook, running for real', () => {
       }
     });
 
+    it('writes the three trailers as one block, in a fixed order', () => {
+      // Written by two changes that never saw each other: the mode, the
+      // disclosure and the session must stay in one trailer paragraph, or
+      // git interpret-trailers and every parser downstream lose the last one.
+      optIn();
+      git('git commit -q --allow-empty -m "feat: x"', { CLAUDECODE: '1', CLAUDE_CODE_SESSION_ID: SID });
+      expect(lastMessage()).toContain(
+        `AI-Mode: agent\nAssisted-by: Claude Code\nAI-Session: claude-code/${SID}`
+      );
+      const parsed = execSync('git log -1 --format=%B | git interpret-trailers --parse', {
+        cwd: repoPath,
+      }).toString();
+      expect(parsed).toContain('AI-Session: claude-code/');
+      expect(parsed).toContain('Assisted-by: Claude Code');
+    });
+
     it('does not link a commit declared hand-written', () => {
       optIn();
       git('git commit -q --allow-empty -m "fix: by hand"', {
