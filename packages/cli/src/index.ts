@@ -2,7 +2,6 @@
 
 import { Command } from 'commander';
 import { createRequire } from 'module';
-import { basename } from 'path';
 import { createCollectCommand } from './commands/collect.js';
 import { createBlameCommand } from './commands/blame.js';
 import { createInstallHooksCommand } from './commands/install-hooks.js';
@@ -22,18 +21,9 @@ const { version } = createRequire(import.meta.url)('../package.json') as { versi
 
 const program = new Command();
 
-// `aida` stays as an alias for one release so existing `prepare` scripts and
-// CI steps keep working; the notice goes to stderr so piped output is clean.
-const invokedAs = basename(process.argv[1] ?? '');
-if (invokedAs === 'aida') {
-  process.stderr.write(
-    'aida was renamed to evidtrail; the `aida` command will be removed in the next major. Run `evidtrail` instead.\n'
-  );
-}
-
 program
   .name('evidtrail')
-  .description('An auditable ledger of AI provenance and change signals for your git repositories')
+  .description('AI provenance for git: declared at commit time, checked in CI, traceable to the agent session')
   .version(version);
 
 // Add commands

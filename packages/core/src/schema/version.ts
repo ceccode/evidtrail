@@ -22,7 +22,13 @@ export const COMMIT_STREAM_SCHEMA_VERSION = 3;
 // v2 (#25): coverage is measured on the evidence axis, and the prior is
 // `defaultMode` (an autonomy level) rather than `defaultAttribution`.
 // v3: scope/snapshot metadata and fixed-horizon rapid-retouch semantics.
-export const METRICS_SCHEMA_VERSION = 3;
+// v4 (2.0): the cohort comparisons are gone — top-level `persistence`,
+// `cohorts`, `byMode`, `fairComparison`, `byCategory`, `baseline`, `delta` —
+// along with the pre-1.0 follow-up fields (`avgDays`, `medianDays`,
+// `buckets`, `censored`, `rework`) and the trend's `avgPersistenceDays` and
+// `reworkRate`. `attribution.defaultMode` is now context only: no number
+// depends on it.
+export const METRICS_SCHEMA_VERSION = 4;
 
 export class SchemaVersionError extends Error {
   constructor(

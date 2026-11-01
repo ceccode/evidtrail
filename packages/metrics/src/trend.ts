@@ -3,13 +3,12 @@ import { observationEndOf } from './observation.js';
 import { calculatePersistence } from './persistence.js';
 import { Trend, TrendComparability, TrendGranularity, TrendPeriod } from './schema/metrics.js';
 
-// Quality over time (#77, step 3). The comparator that replaces cohorts.
+// Change signals over time (#77, step 3).
 //
 // Once AI participates in nearly every commit, "AI vs human" has no second
-// side left to compare against — `No baseline cohort` is the normal outcome,
-// not bad luck. What still answers "is this getting better or worse?" is the
-// repo compared with its own past: is rework rising since we raised agent
-// autonomy, did persistence degrade after switching models.
+// side left to compare against. What can still be compared is the repo with
+// its own past: are files touched again more or less often than before. That
+// is a change in churn, not proof of a change in quality.
 //
 // Derived from the commit stream in a single run rather than from stored
 // snapshots: a team gets a trend the first time they run evidtrail, instead of
@@ -19,12 +18,12 @@ import { Trend, TrendComparability, TrendGranularity, TrendPeriod } from './sche
 //
 // THE TRAP THIS IS BUILT AROUND: a period that ended yesterday has had one
 // day to be reworked, while a period from last year has had a year. Compare
-// them raw and every report ever generated says quality is collapsing — an
+// them raw and every report ever generated says retouch is rising — an
 // artifact of the clock, stated as a finding. Two mechanisms prevent it:
 //
-//   1. Every period is measured through the SAME observation window
-//      (`observationDays`, via the age-normalization from #29), so no period
-//      gets credit for time the others did not have.
+//   1. Every period is judged on the SAME fixed horizon (`observationDays`):
+//      a file counts as retouched only if it was touched again within that
+//      many days, so no period gets credit for time the others did not have.
 //   2. A period is `mature` only once it ended at least `observationDays`
 //      ago — before that, its files have not all had the full window. The
 //      most recent periods are always immature; they are reported, marked,
@@ -192,7 +191,6 @@ export function calculateTrend(commitStream: CommitStream, options: TrendOptions
         authoredCommits.length > 0
           ? calculatePersistence(commitStream, isTarget, {
               observationEnd,
-              maxObservationDays: observationDays,
               retouchHorizons: [observationDays],
             })
           : null,
@@ -214,22 +212,6 @@ export function calculateTrend(commitStream: CommitStream, options: TrendOptions
       ? {
           from: previous.label,
           to: latest.label,
-          avgPersistenceDays: {
-            from: previous.persistence!.avgDays,
-            to: latest.persistence!.avgDays,
-            delta: round(latest.persistence!.avgDays - previous.persistence!.avgDays, 2),
-          },
-          reworkRate:
-            previous.persistence!.rework && latest.persistence!.rework
-              ? {
-                  from: previous.persistence!.rework.rate,
-                  to: latest.persistence!.rework.rate,
-                  delta: round(
-                    latest.persistence!.rework.rate - previous.persistence!.rework.rate,
-                    4
-                  ),
-                }
-              : null,
           rapidRetouchRate: (() => {
             const from = previous.persistence!.rapidRetouch.find(
               (result) => result.windowDays === observationDays

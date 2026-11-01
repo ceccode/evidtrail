@@ -105,16 +105,16 @@ jobs:
       - name: evidtrail on the PR change set
         if: github.event_name == 'pull_request'
         run: |
-          npx --yes @evidtrail/cli@1 collect --pr --out-dir ./.evidtrail --redact-authors
-          npx --yes @evidtrail/cli@1 analyze --out-dir ./.evidtrail
-          npx --yes @evidtrail/cli@1 report --out-dir ./.evidtrail
+          npx --yes @evidtrail/cli@2 collect --pr --out-dir ./.evidtrail --redact-authors
+          npx --yes @evidtrail/cli@2 analyze --out-dir ./.evidtrail
+          npx --yes @evidtrail/cli@2 report --out-dir ./.evidtrail
 
       - name: evidtrail on ${defaultBranch}
         if: github.event_name == 'push'
         run: |
-          npx --yes @evidtrail/cli@1 collect --out-dir ./.evidtrail --redact-authors
-          npx --yes @evidtrail/cli@1 analyze --out-dir ./.evidtrail
-          npx --yes @evidtrail/cli@1 report --out-dir ./.evidtrail
+          npx --yes @evidtrail/cli@2 collect --out-dir ./.evidtrail --redact-authors
+          npx --yes @evidtrail/cli@2 analyze --out-dir ./.evidtrail
+          npx --yes @evidtrail/cli@2 report --out-dir ./.evidtrail
 
       - name: Post the PR comment (upserted, one per PR)
         if: github.event_name == 'pull_request'
@@ -124,7 +124,7 @@ jobs:
         run: |
           marker='<!-- evidtrail-report -->'
           comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \\
-            --jq '.[] | select(.body | startswith("<!-- evidtrail-report -->") or startswith("<!-- aida-metrics-report -->")) | .id' | head -n 1)
+            --jq '.[] | select(.body | startswith("<!-- evidtrail-report -->")) | .id' | head -n 1)
           payload=$(jq -Rs --arg marker "$marker" '{body: ($marker + "\\n" + .)}' < ./.evidtrail/report.md)
           if [ -n "$comment_id" ]; then
             printf '%s' "$payload" | gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" --input -
@@ -151,8 +151,8 @@ export async function runInit(options: InitOptions): Promise<InitStep[]> {
     throw new Error(`${repoPath} is not a git repository. Run evidtrail init from a clone.`);
   }
 
-  // .evidtrail.json — written only when absent, and without a prior unless asked:
-  // a prior is an assumption, and assumptions are opted into, not defaulted.
+  // .evidtrail.json — written only when absent, and without a defaultMode unless
+  // asked: the hook stamps it on every commit, so it is opted into, not defaulted.
   const configPath = join(repoPath, CONFIG_FILENAME);
   const existingConfig = await findConfigFile(repoPath);
   if (existingConfig) {
@@ -161,8 +161,8 @@ export async function runInit(options: InitOptions): Promise<InitStep[]> {
     steps.push({
       target: CONFIG_FILENAME,
       status: 'exists',
-      note: existingConfig.legacy
-        ? `found as ${existingConfig.name} (pre-rename name) — git mv ${existingConfig.name} ${CONFIG_FILENAME}`
+      note: existingConfig.retired
+        ? `found as ${existingConfig.name}, which is no longer read — git mv ${existingConfig.name} ${CONFIG_FILENAME}`
         : 'left untouched',
     });
   } else {
@@ -173,8 +173,8 @@ export async function runInit(options: InitOptions): Promise<InitStep[]> {
       target: '.evidtrail.json',
       status: 'created',
       note: options.defaultMode
-        ? `defaultMode: ${options.defaultMode} — a prior for history with no evidence; it never counts as evidence`
-        : 'no prior; add "defaultMode" later if you want no-evidence history assigned to a level',
+        ? `defaultMode: ${options.defaultMode} — the hook stamps it on new commits when nothing else determines the mode`
+        : 'no defaultMode; the hook stamps only what it can detect or EVIDTRAIL_MODE states',
     });
   }
 
@@ -247,7 +247,7 @@ export function createInitCommand(): Command {
   return new Command('init')
     .description('Set up evidtrail in this repository: config, commit hook, prepare script, CI workflow')
     .option('--repo <path>', 'Repository path', process.cwd())
-    .option('--default-mode <value>', 'Prior for history with no evidence: none | autocomplete | assisted | agent')
+    .option('--default-mode <value>', 'Mode the hook stamps when nothing else determines it: none | autocomplete | assisted | agent')
     .option('--no-workflow', 'Do not write .github/workflows/evidtrail.yml')
     .option('--no-prepare', 'Do not add the prepare script to package.json')
     .action(async (options) => {

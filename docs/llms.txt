@@ -15,11 +15,12 @@ evidtrail does not infer productivity, defects, deployment, causality, capitaliz
 - With `git config evidtrail.recordSession true`, AI commits also carry `AI-Session: <agent>/<id>`. `evidtrail trail <commit>` finds the transcript locally and never opens it.
 - Tool co-author trailers (for example `Co-Authored-By: Claude`) are read as inferred evidence.
 - A commit with no signal stays `unknown`. It is never assumed to be human.
-- A configured `defaultMode` prior can place no-evidence commits in a cohort for analysis, but it never counts as evidence, never raises coverage, and is always labelled assumed. Cohort tables are withheld when every commit in them comes from the prior.
+- A configured `defaultMode` acts only at commit time, when the hook stamps it. Analysis applies it to nothing: commits with no evidence stay `unknown`, and coverage never rises.
+- There is no AI-vs-human comparison of change signals (removed in 2.0): in most repositories one side is empty, and where both exist the gap reflects the work each group did more than the code.
 
 ## Honesty mechanisms worth knowing
 
-- Trends compare only mature periods: every period is measured through the same observation window, and a period is comparable only after it has been over for the full window. Otherwise every report would find quality declining.
+- Trends compare only mature periods: every period is judged on the same fixed horizon, and a period is comparable only after it has been over for that horizon. Otherwise every report would find retouch rising.
 - Scope is explicit: default-branch ancestry by default; all refs and PR change sets are opt-in and labelled.
 - Analysis is deterministic from a collected snapshot; output schemas are versioned and readers refuse incompatible inputs.
 - Collection, analysis and reporting are local. Only `fetch-prs` and `comment` use the network, both opt-in.

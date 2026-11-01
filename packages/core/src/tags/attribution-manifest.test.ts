@@ -160,9 +160,10 @@ describe('loadAttributionManifest', () => {
     }
   });
 
-  it('still reads the pre-rename aida-attribution.json, and says so', async () => {
-    // A manifest is retroactive evidence; losing it on upgrade would turn
-    // declared commits back into unknown without anyone noticing.
+  it('no longer reads the pre-rename aida-attribution.json, and says so', async () => {
+    // A manifest is retroactive evidence. 2.0 stops reading the old name, but
+    // dropping it in silence would turn declared commits back into unknown
+    // without anyone noticing: the warning is what makes the removal honest.
     const dir = mkdtempSync(join(tmpdir(), 'evidtrail-manifest-test-'));
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
     try {
@@ -170,10 +171,9 @@ describe('loadAttributionManifest', () => {
         join(dir, 'aida-attribution.json'),
         JSON.stringify({ version: '1.0', ai_assisted_commits: [{ hash: HASH_AI }] })
       );
-      const manifest = await loadAttributionManifest(dir, logger);
-      expect(manifest?.ai_assisted_commits).toHaveLength(1);
+      expect(await loadAttributionManifest(dir, logger)).toBeNull();
       expect(logger.warn).toHaveBeenCalledOnce();
-      expect(logger.warn.mock.calls[0][0]).toContain('evidtrail-attribution.json');
+      expect(logger.warn.mock.calls[0][0]).toContain('git mv aida-attribution.json evidtrail-attribution.json');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

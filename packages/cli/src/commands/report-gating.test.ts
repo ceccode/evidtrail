@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import type { Command } from 'commander';
+import type { Metrics } from '@evidtrail/metrics';
 import { createCollectCommand } from './collect.js';
 import { createAnalyzeCommand } from './analyze.js';
 import { createReportCommand } from './report.js';
@@ -20,33 +21,13 @@ function git(cmd: string) {
   execSync(cmd, { cwd: repoPath, env: { ...process.env, EVIDTRAIL_MODE: '', CLAUDECODE: '' } });
 }
 
-// The report has an observed-counts table AND cohort overlays; assertions
-// about gating must target the overlay, since the observed table showing
-// `agent 0` is exactly right.
-function section(report: string, heading: string): string {
-  const start = report.indexOf(heading);
-  if (start === -1) return '';
-  const rest = report.slice(start + heading.length);
-  // A section ends at the next heading of level 2 or 3: overlays are
-  // level-3 sections under Change Signals.
-  const match = rest.match(/\n#{2,3} /);
-  return match?.index === undefined ? rest : rest.slice(0, match.index);
-}
-
 function run(command: Command, args: string[]): Promise<Command> {
   return command.parseAsync(args, { from: 'user' });
 }
 
-interface ModeCohort {
-  commits: number;
-  assumed: number;
-}
-
-async function pipeline(
-  extraArgs: string[] = []
-): Promise<{ report: string; metrics: { byMode: Record<string, ModeCohort | null> } }> {
+async function pipeline(): Promise<{ report: string; metrics: Metrics }> {
   await run(createCollectCommand(), ['--repo', repoPath, '--out-dir', outDir]);
-  await run(createAnalyzeCommand(), ['--out-dir', outDir, ...extraArgs]);
+  await run(createAnalyzeCommand(), ['--out-dir', outDir]);
   await run(createReportCommand(), ['--out-dir', outDir]);
   return {
     report: readFileSync(join(outDir, 'report.md'), 'utf-8'),
@@ -69,73 +50,34 @@ afterEach(() => {
   rmSync(outDir, { recursive: true, force: true });
 });
 
-describe('overlay gating (#77 step 4)', () => {
-  it('withholds every cohort overlay when only the prior populates them', async () => {
-    // Two commits, neither declaring anything: 0% evidence
+describe('defaultMode in 2.0', () => {
+  // Up to 1.x a configured prior placed no-evidence commits into cohorts, and
+  // the report needed a gate (#77 step 4) to stop the assumption from
+  // rendering tables about itself. 2.0 removed the cohorts, so the prior has
+  // nothing left to move. What must still happen: the reader learns it is
+  // configured and that it was not applied, because a silent setting reads
+  // as "these commits were checked".
+  it('moves no number, creates no section, and says it was not applied', async () => {
+    writeFileSync(join(repoPath, '.evidtrail.json'), JSON.stringify({ defaultMode: 'agent' }));
     writeFileSync(join(repoPath, 'a.ts'), 'export const a = 1;\n');
     git('git add -A && git commit -q -m "feat: one"');
     writeFileSync(join(repoPath, 'a.ts'), 'export const a = 2;\n');
     git('git add -A && git commit -q -m "feat: two"');
 
-    const { report, metrics } = await pipeline(['--default-mode', 'agent']);
+    const { report, metrics } = await pipeline();
 
-    // The prior would otherwise conjure a full agent cohort out of nothing
-    expect(metrics.byMode.agent).toEqual(expect.objectContaining({ commits: 2, assumed: 2 }));
+    expect(metrics.attribution.defaultMode).toBe('agent');
+    expect(metrics.attribution.modes.agent).toBe(0);
+    expect(metrics.attribution.unknown).toBe(2);
+    expect(metrics).not.toHaveProperty('byMode');
+    expect(metrics).not.toHaveProperty('baseline');
 
-    // ...but no overlay row is rendered from it. Scoped to the overlay: the
-    // observed table above legitimately shows `agent 0`, which is the truth.
-    expect(section(report, '### By Autonomy Level')).not.toMatch(/\| agent \|/);
-    // Withheld with a reason, not silently dropped: a configured prior doing
-    // nothing is itself worth telling the reader about
-    expect(report).toContain('**Withheld**');
-    expect(report).toContain('the assumption describing itself');
-    expect(report).not.toContain('### Cohort Fairness');
-
-    // Repo-level quality is untouched by the gate: it never needed evidence
+    expect(report).toContain('`defaultMode` is `agent`: the commit hook stamps it on new commits. It is not applied to the 2 commits');
+    for (const removed of ['### By Autonomy Level', '### AI vs Baseline', '### Cohort Fairness', 'assumed']) {
+      expect(report).not.toContain(removed);
+    }
     expect(report).toContain('### Repository');
     expect(report).toContain('#### Trend');
-  });
-
-  it('renders the overlay as soon as one commit carries real evidence', async () => {
-    writeFileSync(join(repoPath, 'a.ts'), 'export const a = 1;\n');
-    git('git add -A && git commit -q -m "feat: undeclared"');
-    writeFileSync(join(repoPath, 'b.ts'), 'export const b = 1;\n');
-    git('git add -A && git commit -q -m "feat: declared" -m "AI-Mode: agent"');
-
-    const { report } = await pipeline(['--default-mode', 'agent']);
-
-    // One real agent commit backs the cohort, so it is shown — with the
-    // prior's contribution still labelled
-    expect(section(report, '### By Autonomy Level')).toMatch(/\| agent \|/);
-    expect(report).toContain('assumed)');
-  });
-
-  it('withholds the AI-vs-baseline comparison when one side is pure prior', async () => {
-    // A declared AI commit and a set of undeclared ones assumed 'none'
-    writeFileSync(join(repoPath, 'a.ts'), 'export const a = 1;\n');
-    git(
-      'git add -A && git commit -q -m "feat: ai" -m "Co-Authored-By: Claude <noreply@anthropic.com>"'
-    );
-    writeFileSync(join(repoPath, 'b.ts'), 'export const b = 1;\n');
-    git('git add -A && git commit -q -m "feat: undeclared"');
-
-    const { report } = await pipeline(['--default-mode', 'none']);
-
-    // The baseline exists only because the prior said so
-    expect(report).toContain('**Comparison withheld**');
-    expect(report).toContain('placed there by assumption');
-    expect(report).not.toContain('| Avg persistence (days) |');
-  });
-
-  it('keeps the unknown row: the no-evidence bucket is the honest part', async () => {
-    writeFileSync(join(repoPath, 'a.ts'), 'export const a = 1;\n');
-    git('git add -A && git commit -q -m "feat: undeclared"');
-
-    // No prior at all: everything stays unknown
-    const { report } = await pipeline();
-
-    expect(section(report, '### By Autonomy Level')).toMatch(/\| unknown \|/);
-    expect(report).not.toContain('**Comparison withheld**');
   });
 });
 

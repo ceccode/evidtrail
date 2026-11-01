@@ -77,22 +77,22 @@ describe('collect → analyze → report end to end', () => {
     await run(createAnalyzeCommand(), ['--out-dir', outDir]);
 
     const metrics = JSON.parse(readFileSync(join(outDir, 'metrics.json'), 'utf-8'));
-    expect(metrics.schemaVersion).toBe(3);
+    expect(metrics.schemaVersion).toBe(4);
     expect(metrics.attribution.coverage).toBeCloseTo(0.5);
     expect(metrics.attribution.modes.agent).toBe(0);
     expect(metrics.attribution.modes.unknown).toBe(2);
-    expect(metrics.persistence).toHaveProperty('censored');
-    expect(metrics.cohorts.ai.taskMix).not.toBeNull();
-    expect(metrics.byMode.agent).toBeNull();
-    expect(metrics.byMode.unknown).not.toBeNull();
+    expect(metrics.repo.persistence.rapidRetouch.map((r: { windowDays: number }) => r.windowDays)).toEqual([7, 30, 90]);
     // Trend is always present, and refuses to compare immature periods (#77)
     expect(metrics.trend.periods.length).toBeGreaterThan(0);
     expect(metrics.trend.periods.every((p: { mature: boolean }) => !p.mature)).toBe(true);
     expect(metrics.trend.latestComparison).toBeNull();
-    // No human-attributed commits → no invented comparison
-    expect(metrics.baseline).toBeNull();
-    expect(metrics.delta).toBeNull();
-    expect(metrics).not.toHaveProperty('mergeRatio');
+    // Removed metrics stay removed: merge ratio (#20), and in 2.0 the cohort
+    // comparisons and the pre-1.0 follow-up fields
+    for (const removed of ['mergeRatio', 'persistence', 'cohorts', 'byMode', 'fairComparison', 'byCategory', 'baseline', 'delta']) {
+      expect(metrics).not.toHaveProperty(removed);
+    }
+    expect(metrics.repo.persistence).not.toHaveProperty('avgDays');
+    expect(metrics.repo.persistence).not.toHaveProperty('rework');
   });
 
   it('renders a report containing every section the metrics support', async () => {
@@ -117,14 +117,16 @@ describe('collect → analyze → report end to end', () => {
     expect(report).toContain('| Autonomy level | Commits |');
     expect(report).toContain('*Three-state view:*');
     expect(report.indexOf('| Autonomy level | Commits |')).toBeLessThan(report.indexOf('## Change Signals'));
-    expect(report).toContain('### By Autonomy Level');
     // The trend is a sub-part of the repository signals, not the headline
     expect(report).toContain('#### Trend (monthly, 30-day observation window)');
     // Every commit in this fixture was made moments ago, so no period can be
     // mature: the report must decline to compare rather than invent a trend
     expect(report).toContain('**No comparison yet**');
     expect(report).toContain('Too recent to judge');
-    expect(report).toContain('### Cohort Fairness');
+    // 2.0 dropped the cohort comparisons: the change signals are repo-level
+    for (const removed of ['### By Autonomy Level', '### AI vs Baseline', '### Cohort Fairness']) {
+      expect(report).not.toContain(removed);
+    }
     // The old generic-looking persistence section rendered the AI cohort's
     // numbers under a repo-level label; bounded change signals replaced it
     expect(report).not.toContain('Persistence (file-level survival)');

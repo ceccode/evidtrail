@@ -122,33 +122,24 @@ export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
     try {
       const config = await loadConfig(repoPath);
       const validity = config.defaultMode
-        ? `valid — defaultMode: ${config.defaultMode} (a prior: joins cohorts, never counts as evidence)`
-        : 'valid — no defaultMode prior';
-      checks.push(
-        configFile.legacy
-          ? {
-              // Still read, so not a failure — but a name that stops working
-              // next major deserves to be said out loud now, not then.
-              name: CONFIG_FILENAME,
-              status: 'warn',
-              detail: `${validity}, but stored as ${configFile.name} (pre-rename name)`,
-              fix: `git mv ${configFile.name} ${CONFIG_FILENAME}`,
-            }
-          : { name: CONFIG_FILENAME, status: 'ok', detail: validity }
-      );
+        ? `valid — defaultMode: ${config.defaultMode} (stamped on new commits by the hook; never applied to past ones)`
+        : 'valid — no defaultMode';
+      checks.push({ name: CONFIG_FILENAME, status: 'ok', detail: validity });
     } catch (error) {
       checks.push({
         name: CONFIG_FILENAME,
         status: 'fail',
         detail: describeError(error).split('\n')[0],
-        fix: 'Fix the file; evidtrail analyze refuses to run with a broken config rather than apply defaults.',
+        fix: configFile.retired
+          ? `git mv ${configFile.name} ${CONFIG_FILENAME}`
+          : 'Fix the file; evidtrail analyze refuses to run with a broken config rather than apply defaults.',
       });
     }
   } else {
     checks.push({
       name: CONFIG_FILENAME,
       status: 'warn',
-      detail: 'absent — defaults apply (no prior, coverage threshold 70%)',
+      detail: 'absent — defaults apply (no defaultMode, coverage threshold 70%)',
       fix: 'evidtrail init writes a starter config.',
     });
   }

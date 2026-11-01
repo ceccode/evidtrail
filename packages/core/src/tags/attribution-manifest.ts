@@ -5,9 +5,10 @@ import { AIMode, AITagResult, tagFromAxes } from './ai-tags.js';
 import { Logger } from '../utils/log.js';
 
 export const MANIFEST_FILENAME = 'evidtrail-attribution.json';
-// Pre-rename name, read for one release: a manifest is retroactive evidence,
-// and losing it on upgrade would turn declared commits back into unknown.
-export const LEGACY_MANIFEST_FILENAME = 'aida-attribution.json';
+// Pre-rename name, read until 2.0 and no longer. It is still LOOKED FOR: a
+// manifest is retroactive evidence, and dropping it in silence would turn
+// declared commits back into unknown without anyone noticing.
+const RETIRED_MANIFEST_FILENAME = 'aida-attribution.json';
 
 const ManifestMode = z.enum(['autocomplete', 'assisted', 'agent']);
 
@@ -65,20 +66,19 @@ export async function loadAttributionManifest(
   logger?: Logger
 ): Promise<AttributionManifest | null> {
   let raw: string | null = null;
-  for (const name of [MANIFEST_FILENAME, LEGACY_MANIFEST_FILENAME]) {
+  try {
+    raw = await readFile(join(repoPath, MANIFEST_FILENAME), 'utf-8');
+  } catch {
     try {
-      raw = await readFile(join(repoPath, name), 'utf-8');
-    } catch {
-      continue;
-    }
-    if (name === LEGACY_MANIFEST_FILENAME) {
+      await readFile(join(repoPath, RETIRED_MANIFEST_FILENAME), 'utf-8');
       logger?.warn(
-        `${LEGACY_MANIFEST_FILENAME} is the pre-rename manifest name and will stop being read in the next major — rename it to ${MANIFEST_FILENAME}.`
+        `${RETIRED_MANIFEST_FILENAME} is no longer read since evidtrail 2.0, so its declarations are not applied: git mv ${RETIRED_MANIFEST_FILENAME} ${MANIFEST_FILENAME}`
       );
+    } catch {
+      // neither file: no manifest, the common case
     }
-    break;
+    return null;
   }
-  if (raw === null) return null; // no manifest — the common case
 
   try {
     const manifest = AttributionManifest.parse(JSON.parse(raw));

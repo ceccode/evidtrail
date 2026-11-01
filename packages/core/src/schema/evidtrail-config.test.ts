@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { AidaConfig, EvidtrailConfig, assertNoRetiredConfigKeys } from './evidtrail-config.js';
+import { EvidtrailConfig, assertNoRetiredConfigKeys } from './evidtrail-config.js';
 
 describe('assertNoRetiredConfigKeys', () => {
-  // zod strips unknown keys, so a config still carrying the retired prior
-  // would parse cleanly and quietly stop applying — changing which commits
-  // join which cohort on the day a repo upgrades, with no warning at all.
+  // A config still carrying the retired prior must not parse cleanly and
+  // quietly stop applying: a setting the repository chose would vanish on
+  // the day it upgrades, with no warning at all.
   it('refuses a config that still uses defaultAttribution', () => {
     expect(() => assertNoRetiredConfigKeys({ defaultAttribution: 'ai' })).toThrow(/defaultMode/);
   });
@@ -28,15 +28,5 @@ describe('assertNoRetiredConfigKeys', () => {
     const config = EvidtrailConfig.parse({ defaultMode: 'agent' });
     expect(config.defaultMode).toBe('agent');
     expect(config).not.toHaveProperty('defaultAttribution');
-  });
-});
-
-describe('the pre-rename export name', () => {
-  // AidaConfig is a published export: renaming it outright would break any
-  // importer on a minor upgrade, which is the opposite of what the rename
-  // promised. The alias is the same shim the config file and the env var get.
-  it('still parses, and is the same schema', () => {
-    expect(AidaConfig).toBe(EvidtrailConfig);
-    expect(AidaConfig.parse({ defaultMode: 'agent' })).toMatchObject({ defaultMode: 'agent' });
   });
 });

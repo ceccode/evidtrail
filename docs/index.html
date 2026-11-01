@@ -37,7 +37,7 @@
           "alternateName": "AIDA Metrics",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Linux, macOS, Windows",
-          "softwareVersion": "1.3",
+          "softwareVersion": "2.0",
           "license": "https://opensource.org/licenses/MIT",
           "url": "https://ceccode.github.io/evidtrail/",
           "downloadUrl": "https://www.npmjs.com/package/@evidtrail/cli",
@@ -75,13 +75,13 @@
             },
             {
               "@type": "Question",
-              "name": "Why does evidtrail sometimes refuse to show a comparison?",
-              "acceptedAnswer": { "@type": "Answer", "text": "Because the comparison would describe an assumption, not the repository. Cohort tables appear only where at least one commit carries real evidence; a configured prior can move commits into a cohort but never creates a table on its own, never raises coverage, and is always labelled as assumed." }
+              "name": "Why doesn't evidtrail compare AI-written code with human-written code?",
+              "acceptedAnswer": { "@type": "Answer", "text": "It did until 1.3, and 2.0 removed the comparison. In most repositories one side is empty, and where both exist the gap between them reflects the work each group did more than the quality of the code. A configured defaultMode is stamped on new commits by the hook and is never applied to old ones." }
             },
             {
               "@type": "Question",
               "name": "Why is the most recent month excluded from the trend?",
-              "acceptedAnswer": { "@type": "Answer", "text": "A period that ended yesterday has had one day to be reworked; a period from last year has had a year. Compared raw, every report would find quality declining. evidtrail measures every period through the same observation window and compares only periods that have been over for the full window." }
+              "acceptedAnswer": { "@type": "Answer", "text": "A period that ended yesterday has had one day to be reworked; a period from last year has had a year. Compared raw, every report would find retouch rising. evidtrail judges every period on the same fixed horizon and compares only periods that have been over for that horizon." }
             },
             {
               "@type": "Question",
@@ -155,7 +155,7 @@
                             <span class="prompt">$</span> evidtrail init
                         </div>
                         <div class="terminal-line output">
-                            + .evidtrail.json &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;created — no prior
+                            + .evidtrail.json &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;created
                         </div>
                         <div class="terminal-line output">
                             + commit hook &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;installed
@@ -308,7 +308,7 @@
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> actions/checkout@v5</div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">with:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">fetch-depth:</span> 0</div>
-                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> ceccode/evidtrail@v1</div>
+                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> ceccode/evidtrail@v2</div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">with:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">comment:</span> true</div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">require-provenance:</span> declared</div>
@@ -335,10 +335,10 @@
                     <dd>Yes. <code>evidtrail verify</code>, or the Action input <code>require-provenance</code>, fails a pull request whose commits do not state how they were produced, the way a DCO check requires <code>Signed-off-by</code>.</dd>
                     <dt>How does it know a commit came from an AI agent, without anyone labelling commits?</dt>
                     <dd>A <code>prepare-commit-msg</code> hook, installed once per clone or automatically through a <code>package.json</code> <code>prepare</code> script, detects agent sessions (Claude Code, Cursor) from their environment and stamps <code>AI-Mode</code> and <code>Assisted-by</code> trailers. <code>Assisted-by</code> written by people and tool co-author trailers are read as well. A commit with no signal stays <code>unknown</code> — it is never assumed to be human.</dd>
-                    <dt>Why does it sometimes refuse to show a comparison?</dt>
-                    <dd>Because the comparison would describe an assumption, not the repository. Cohort tables appear only where at least one commit carries real evidence. A configured prior can place commits in a cohort, but it never creates a table on its own, never raises coverage, and is always labelled <em>assumed</em>.</dd>
+                    <dt>Why doesn't it compare AI-written code with human-written code?</dt>
+                    <dd>It did until 1.3, and 2.0 removed the comparison. In most repositories one side is empty, and where both exist the gap reflects the work each group did more than the quality of the code. A configured <code>defaultMode</code> is stamped on new commits by the hook and never applied to old ones.</dd>
                     <dt>Why is the most recent month left out of the trend?</dt>
-                    <dd>A period that ended yesterday has had one day to be reworked; one from last year has had a year. Compared raw, every report would find quality declining. Every period is measured through the same observation window, and only periods that have been over for the full window are compared.</dd>
+                    <dd>A period that ended yesterday has had one day to be reworked; one from last year has had a year. Compared raw, every report would find retouch rising. Every period is judged on the same fixed horizon, and only periods that have been over for that horizon are compared.</dd>
                     <dt>Does it send code or commit data anywhere?</dt>
                     <dd>Collection, analysis and reporting are local and offline. Two commands use the network, both opt-in: <code>fetch-prs</code> reads pull request outcomes from the forge API, <code>comment</code> posts the report to a PR. Author identities can be redacted.</dd>
                     <dt>Wasn't this called AIDA Metrics?</dt>

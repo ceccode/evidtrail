@@ -7,8 +7,6 @@ import type { CIProvider, PRIdentifier } from './types.js';
 // same note instead of spamming the merge request.
 
 const MARKER = '<!-- evidtrail-report -->';
-// Notes posted before the rename carry the old marker; see the GitHub provider.
-const LEGACY_MARKER = '<!-- aida-metrics-report -->';
 
 function sanitizeErrorBody(text: string, maxLength = 200): string {
   // GitLab tokens: glpat- (PAT), gloas- (OAuth), plus the CI job token
@@ -101,7 +99,7 @@ export class GitLabProvider implements CIProvider {
 
     const notes = (await response.json()) as Array<{ id: number; body: string }>;
     return (
-      notes.find((note) => note.body.startsWith(marker) || note.body.startsWith(LEGACY_MARKER))
+      notes.find((note) => note.body.startsWith(marker))
         ?.id ?? null
     );
   }
