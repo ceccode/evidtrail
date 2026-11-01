@@ -1,10 +1,9 @@
 import { simpleGit, SimpleGit } from 'simple-git';
 import { Commit, CommitStream } from '../schema/commit.js';
 import { COMMIT_STREAM_SCHEMA_VERSION } from '../schema/version.js';
-import { createAITagger, tagFromAxes } from '../tags/ai-tags.js';
-import { createAutomatedDetector } from '../tags/automated.js';
+import { createProvenanceTagger } from '../tags/provenance.js';
+import { sessionRef } from '../tags/session.js';
 import {
-  applyManifest,
   indexManifest,
   loadAttributionManifest,
   unmatchedManifestHashes,
@@ -269,20 +268,19 @@ export async function collectCommits(options: CollectOptions): Promise<CommitStr
   }
   logger?.info(`Default branch commits: ${defaultBranchHashes.size}`);
 
-  // Create AI tagger
-  const aiTagger = createAITagger({
+  // Optional retroactive attribution manifest at the repo root (#10)
+  const manifest = await loadAttributionManifest(repoPath, logger);
+  const manifestIndex = manifest ? indexManifest(manifest) : null;
+
+  // Message heuristics, automation, then the manifest — shared with `trail`
+  const tagProvenance = createProvenanceTagger({
     patterns: aiPatterns,
     tools: aiTools,
     trailerDomains: aiTrailerDomains,
     botBlocklist: aiBotBlocklist,
+    manifestIndex,
+    logger,
   });
-
-  // Automated detection (#39): merge commits and bot authors
-  const detectAutomated = createAutomatedDetector(aiBotBlocklist);
-
-  // Optional retroactive attribution manifest at the repo root (#10)
-  const manifest = await loadAttributionManifest(repoPath, logger);
-  const manifestIndex = manifest ? indexManifest(manifest) : null;
 
   // Author redaction (#35). Applied last: identity-based detection above
   // must see the real values.
@@ -309,25 +307,8 @@ export async function collectCommits(options: CollectOptions): Promise<CommitStr
     logger?.debug(`Processing commit ${rawCommit.hash}`);
 
     // Tag on the full message (body included, for trailers like Co-Authored-By)
-    let aiTag = aiTagger(rawCommit.message);
-    // Automated detection only when the message carried no signal at all:
-    // in-commit evidence wins over structural heuristics. Automation sits
-    // beside the autonomy axes rather than on them (#25) — a merge commit
-    // has known provenance and no author, so `mode: none` states that no AI
-    // wrote it while `automated` keeps it out of every cohort.
-    if (aiTag.evidence === 'none') {
-      const automatedSource = detectAutomated(rawCommit);
-      if (automatedSource) {
-        aiTag = tagFromAxes({ mode: 'none', evidence: 'inferred', automated: true }, 'none', [
-          ...aiTag.sources,
-          automatedSource,
-        ]);
-      }
-    }
-    // Manifest declarations beat structural heuristics
-    if (manifestIndex) {
-      aiTag = applyManifest(aiTag, rawCommit.hash, manifestIndex, logger);
-    }
+    const aiTag = tagProvenance(rawCommit);
+    const session = sessionRef(rawCommit.message);
 
     // Revert target (#26): only the standard git-generated body line links
     // a revert back to what it reverted; parsed from the full message,
@@ -347,6 +328,7 @@ export async function collectCommits(options: CollectOptions): Promise<CommitStr
       inDefaultBranchAncestry: defaultBranchHashes.has(rawCommit.hash),
       revertsCommit: revertMatch ? revertMatch[1] : null,
       tags: aiTag,
+      ...(session ? { session } : {}),
       stats: rawCommit.stats,
     };
 

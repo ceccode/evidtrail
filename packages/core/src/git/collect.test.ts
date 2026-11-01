@@ -499,3 +499,27 @@ describe('renamed files', () => {
     }
   });
 });
+
+describe('agent session trailer', () => {
+  // The stream carries the session so a report can say how many AI commits
+  // have an address for the evidence git never sees. A commit without the
+  // trailer must not grow an empty session object: absent means absent.
+  it('records the session on the commit that names one, and nothing elsewhere', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'evidtrail-session-'));
+    const run = (cmd: string) =>
+      execSync(cmd, { cwd: dir, env: { ...process.env, EVIDTRAIL_MODE: '', CLAUDECODE: '' } });
+    try {
+      run('git init -q -b main');
+      run('git config user.name test && git config user.email test@example.com');
+      run('git commit -q --allow-empty -m "feat: with" -m "AI-Mode: agent" -m "AI-Session: claude-code/abc-123"');
+      run('git commit -q --allow-empty -m "feat: without" -m "AI-Mode: agent"');
+
+      const stream = await collectCommits({ repoPath: dir });
+      const byMessage = Object.fromEntries(stream.commits.map((c) => [c.message, c]));
+      expect(byMessage['feat: with'].session).toEqual({ agent: 'claude-code', id: 'abc-123' });
+      expect(byMessage['feat: without']).not.toHaveProperty('session');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

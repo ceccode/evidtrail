@@ -48,6 +48,9 @@ export const Commit = z.object({
     level: z.enum(['explicit', 'implicit', 'mention', 'none']),
     sources: z.array(z.string()), // which heuristic matched
   }),
+  // `AI-Session: <agent>/<id>` (opt-in, written by the hook): the agent
+  // session that produced this commit. Absent on most commits.
+  session: z.object({ agent: z.string(), id: z.string() }).optional(),
   stats: z.object({
     totalAdditions: z.number().int().nonnegative(),
     totalDeletions: z.number().int().nonnegative(),

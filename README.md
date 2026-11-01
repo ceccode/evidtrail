@@ -216,6 +216,15 @@ Install the commit-time mode stamping hook:
 evidtrail install-hooks
 ```
 
+#### `evidtrail trail`
+
+Follow commits back to what they state about how they were produced, and to the agent session that produced them, when an `AI-Session:` trailer records one. Read-only and local; it never opens a transcript:
+
+```bash
+evidtrail trail HEAD~3 HEAD
+evidtrail trail --json HEAD
+```
+
 #### `evidtrail blame`
 
 Compute line-level attribution (slow, opt-in):
@@ -446,6 +455,40 @@ EVIDTRAIL_MODE=agent git commit -m "feat: ..."
 The hook is self-contained POSIX shell with no dependency on `evidtrail` being installed, never blocks a commit whatever happens inside it, refuses to overwrite a hook it didn't write (unless `--force`), and removes only its own block on uninstall.
 
 **Honest limit**: a hook is voluntary and local to each clone. It shrinks the unknown bucket, it does not eliminate it — someone who doesn't install it, or unsets the variable, is invisible to it.
+
+#### Linking commits to agent sessions (opt-in)
+
+Git holds what an agent committed and nothing of what happened before: what it tried, what failed, what it fixed. In a codebase written entirely by an agent, errors found and fixed during a session left no trace in its commit history ([Between the Commits](https://arxiv.org/abs/2609.29744)). The session transcript keeps it. Each person opts in for their own commits, and the hook then gives each AI commit the address of its session:
+
+```bash
+git config evidtrail.recordSession true          # this clone
+git config --global evidtrail.recordSession true # every repository with the hook
+```
+
+`EVIDTRAIL_RECORD_SESSION=1` in the environment does the same. It is a git setting rather than a `.evidtrail.json` key on purpose: the sessions are yours, and evidtrail 1.2 and earlier refuse a config file with keys they do not know.
+
+```
+feat: add rate limiting
+
+AI-Mode: agent
+AI-Session: claude-code/3a083123-96c6-48b5-86fe-52c9dbe942f6
+```
+
+Claude Code exposes its session id to the commands it runs (`CLAUDE_CODE_SESSION_ID`), and that id is the name of the transcript file. For other agents, set `EVIDTRAIL_SESSION=<agent>/<id>` yourself. Only AI commits get the trailer, and only a filename-safe id is written.
+
+`evidtrail trail <commit>` follows a commit as far as the evidence goes:
+
+```
+$ evidtrail trail HEAD
+1f2e3d4c5b6a  feat: add rate limiting
+  provenance  agent · declared (trailer:AI-Mode)
+  session     claude-code/3a083123-96c6-48b5-86fe-52c9dbe942f6
+  transcript  /Users/you/.claude/projects/-Users-you-app/3a083123-96c6-48b5-86fe-52c9dbe942f6.jsonl
+```
+
+It never opens the transcript, and it looks only in the session store of agents whose layout it knows. When the transcript is on another machine it says so. The report counts how many AI commits carry a link.
+
+**Privacy.** The id alone reveals nothing: it is a random identifier, and the transcript stays wherever the agent stored it. But a public history keeps every id forever, and anyone who later gets a transcript can match it to its commits. That is why this is off by default. Turn it on where you would be comfortable sharing a transcript to explain a commit.
 
 ### Attribution Manifest (`evidtrail-attribution.json`)
 

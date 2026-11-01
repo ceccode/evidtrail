@@ -81,10 +81,18 @@ export function calculateMetrics(
   const modes = { none: 0, autocomplete: 0, assisted: 0, agent: 0, unknown: 0 };
   const evidence = { declared: 0, inferred: 0, none: 0 };
   let aiModeUnknown = 0;
+  let sessionLinked = 0;
+  const sessionIds = new Set<string>();
   for (const commit of commitStream.commits) {
     counts[commit.tags.attribution]++;
     evidence[commit.tags.evidence]++;
     if (commit.tags.attribution === 'ai' && commit.tags.mode === 'unknown') aiModeUnknown++;
+    // Counted over AI commits only, so the report can put it next to the AI
+    // total without a numerator and denominator from different sets.
+    if (commit.tags.attribution === 'ai' && commit.session) {
+      sessionLinked++;
+      sessionIds.add(`${commit.session.agent}/${commit.session.id}`);
+    }
     // Automation is off the autonomy axis (#39). Counting a merge commit's
     // `mode: 'none'` under "hand-written" would both overstate the human
     // cohort and contradict `byMode`, which excludes automation — two tables
@@ -130,6 +138,7 @@ export function calculateMetrics(
     unknown: counts.unknown,
     coverage: round(coverage, 4),
     aiModeUnknown,
+    sessions: { linked: sessionLinked, distinct: sessionIds.size },
     defaultMode: defaultMode ?? null,
     coverageThreshold,
     belowThreshold: coverage < coverageThreshold,

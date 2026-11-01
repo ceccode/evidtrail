@@ -47,6 +47,15 @@ export const Attribution = z.object({
   // level is not) — the two figures disagree on purpose, and this number is
   // what reconciles them: 100% coverage is not 100% known autonomy.
   aiModeUnknown: z.number().int().nonnegative().optional(),
+  // AI commits that carry an `AI-Session:` trailer, and how many distinct
+  // sessions they point to. A link is an address, not evidence about the
+  // session: nothing here is read from a transcript.
+  sessions: z
+    .object({
+      linked: z.number().int().nonnegative(),
+      distinct: z.number().int().nonnegative(),
+    })
+    .optional(),
   // Autonomy axis (#25): commit counts per mode and per mode-evidence level
   modes: z.object({
     none: z.number().int().nonnegative(),
