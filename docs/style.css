@@ -70,10 +70,6 @@ body {
     font-weight: 700;
 }
 
-.brand-metrics {
-    font-weight: 400;
-}
-
 .nav-brand .tagline {
     font-size: 0.75rem;
     color: var(--text-muted);

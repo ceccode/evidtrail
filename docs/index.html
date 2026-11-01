@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>evidtrail — auditable AI provenance and change signals for git repositories</title>
-    <meta name="description" content="evidtrail is an auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove. Declared vs inferred evidence, fixed-horizon rapid-retouch, trends that never compare immature periods.">
+    <title>evidtrail — AI provenance for git: declared, checked in CI, traceable to the session</title>
+    <meta name="description" content="evidtrail makes every commit state how it was produced. A git hook writes AI-Mode and Assisted-by trailers, evidtrail verify fails a pull request whose commits say nothing, and an opt-in AI-Session trailer links a commit to the agent session that produced it. Unknown is never counted as human.">
     <link rel="canonical" href="https://ceccode.github.io/evidtrail/">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="evidtrail">
-    <meta property="og:title" content="evidtrail — auditable AI provenance and change signals for git">
-    <meta property="og:description" content="An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.">
+    <meta property="og:title" content="evidtrail — AI provenance for git">
+    <meta property="og:description" content="AI provenance for git: declared at commit time, checked in CI, traceable to the agent session. Honest about what git cannot prove.">
     <meta property="og:url" content="https://ceccode.github.io/evidtrail/">
     <meta property="og:image" content="https://ceccode.github.io/evidtrail/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="evidtrail — an auditable ledger of AI provenance and change signals for git repositories">
+    <meta property="og:image:alt" content="evidtrail — AI provenance for git">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="evidtrail — auditable AI provenance and change signals for git">
-    <meta name="twitter:description" content="An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.">
+    <meta name="twitter:title" content="evidtrail — AI provenance for git">
+    <meta name="twitter:description" content="AI provenance for git: declared at commit time, checked in CI, traceable to the agent session. Honest about what git cannot prove.">
     <meta name="twitter:image" content="https://ceccode.github.io/evidtrail/og-image.png">
 
     <!-- Structured data: what this is, and what it explicitly is not — the
@@ -37,12 +37,12 @@
           "alternateName": "AIDA Metrics",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Linux, macOS, Windows",
-          "softwareVersion": "1.0",
+          "softwareVersion": "1.3",
           "license": "https://opensource.org/licenses/MIT",
           "url": "https://ceccode.github.io/evidtrail/",
           "downloadUrl": "https://www.npmjs.com/package/@evidtrail/cli",
           "codeRepository": "https://github.com/ceccode/evidtrail",
-          "description": "An auditable ledger of AI provenance and change signals for git repositories. It records declared and inferred autonomy modes per commit, fixed-horizon rapid-retouch rates, and quality trends that never compare immature periods. It does not infer productivity, defects, deployment, causality, capitalization, or developer performance from git history.",
+          "description": "AI provenance for git repositories. A commit hook writes AI-Mode and Assisted-by trailers, evidtrail verify fails pull requests whose commits do not state how they were produced, and an opt-in AI-Session trailer links a commit to its agent session. Change signals (retouch, reverts, hotfixes) are kept as an appendix. It does not measure code quality, productivity, defects, causality, or developer performance.",
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
         },
         {
@@ -56,12 +56,22 @@
             {
               "@type": "Question",
               "name": "Does evidtrail measure developer productivity or the ROI of AI coding tools?",
-              "acceptedAnswer": { "@type": "Answer", "text": "No. evidtrail records provenance (who or what wrote a commit, and how that is known) and change signals (how often files are touched again within a fixed horizon). It does not infer productivity, defects, deployment, causality, capitalization, or developer performance, because git history cannot establish those." }
+              "acceptedAnswer": { "@type": "Answer", "text": "No. evidtrail records provenance (who or what wrote a commit, and how that is known) and, as an appendix, change signals (how often files are touched again within a fixed horizon). It does not infer productivity, defects, deployment, causality, capitalization, or developer performance, because git history cannot establish those." }
             },
             {
               "@type": "Question",
               "name": "How does evidtrail know a commit was written by an AI agent without developers labelling commits?",
-              "acceptedAnswer": { "@type": "Answer", "text": "A prepare-commit-msg hook, installed once per clone (or automatically via a package.json prepare script), detects agent sessions such as Claude Code or Cursor from their environment and stamps an AI-Mode trailer. Tool co-author trailers are read as well. A commit with no signal stays unknown — it is never assumed to be human." }
+              "acceptedAnswer": { "@type": "Answer", "text": "A prepare-commit-msg hook, installed once per clone (or automatically via a package.json prepare script), detects agent sessions such as Claude Code or Cursor from their environment and stamps an AI-Mode trailer, plus an Assisted-by trailer naming the tool. Assisted-by trailers written by people, the convention of the Linux kernel, Fedora and LLVM, and tool co-author trailers are read as well. A commit with no signal stays unknown — it is never assumed to be human." }
+            },
+            {
+              "@type": "Question",
+              "name": "Can a pull request be required to declare AI use?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. evidtrail verify, or the GitHub Action input require-provenance, fails a pull request whose commits do not state how they were produced, the way a DCO check requires Signed-off-by. AI-Mode: none passes; a repository-wide default does not." }
+            },
+            {
+              "@type": "Question",
+              "name": "Does evidtrail measure whether AI-written code is good?",
+              "acceptedAnswer": { "@type": "Answer", "text": "No. Mistakes an agent makes and fixes inside its session never reach git, so git history cannot answer that. evidtrail reports retouches, reverts and hotfixes as change signals in an appendix, and says that they are churn, not quality." }
             },
             {
               "@type": "Question",
@@ -93,8 +103,8 @@
     <header class="header">
         <nav class="nav">
             <div class="nav-brand">
-                <h1><span class="brand-evidtrail">evidtrail</span> <span class="brand-metrics">Metrics</span></h1>
-                <span class="tagline">An auditable evidence ledger for AI-assisted software development</span>
+                <h1><span class="brand-evidtrail">evidtrail</span></h1>
+                <span class="tagline">AI provenance for git</span>
             </div>
             <div class="nav-links">
                 <a href="#features">Features</a>
@@ -110,12 +120,12 @@
         <section class="hero">
             <div class="container">
                 <h1 class="hero-title">
-                    Record evidence for<br>
-                    <span class="gradient-text">AI-assisted development</span>
+                    Every commit says<br>
+                    <span class="gradient-text">how it was produced</span>
                 </h1>
                 <p class="hero-subtitle">
-                    evidtrail records scoped evidence, declared autonomy, and repository change signals—
-                    with assumptions and limits kept visible.
+                    A git hook declares AI use at commit time, a CI check fails pull requests that stay silent,
+                    and an AI commit can point to the agent session that produced it.
                 </p>
                 <div class="hero-actions">
                     <div class="install-command">
@@ -163,7 +173,7 @@
                             ✓ clone depth &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; full history
                         </div>
                         <div class="terminal-line output">
-                            ✓ commit hook (this clone) &nbsp;AI-Mode trailer will be stamped
+                            ✓ commit hook (this clone) &nbsp;AI-Mode and Assisted-by will be stamped
                         </div>
                         <div class="terminal-line output">
                             Ready: every check passed.
@@ -188,37 +198,37 @@
 
         <section id="features" class="features">
             <div class="container">
-                <h2>Core Metrics</h2>
+                <h2>What it does</h2>
                 <div class="features-grid">
                     <div class="feature-card">
-                        <div class="feature-icon">📊</div>
-                        <h3>Repository Change Signals</h3>
-                        <p>How often eligible files are touched again within fixed horizons. Too-recent files stay visible and outside the denominator; retouch is not presented as a defect.</p>
+                        <div class="feature-icon">✍️</div>
+                        <h3>Declared at commit time</h3>
+                        <p>The commit hook writes <code>AI-Mode</code> and <code>Assisted-by</code>, the trailer the Linux kernel, Fedora and LLVM ask for. When evidtrail cannot know the mode, it writes nothing, and <code>unknown</code> stays honest.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">⏱️</div>
-                        <h3>Quality Over Time</h3>
-                        <p>The repo compared with its own past — the comparator that still works once AI touches nearly every commit. Every period measured through the same window; periods too recent to judge are never compared.</p>
+                        <div class="feature-icon">✅</div>
+                        <h3>Checked in CI</h3>
+                        <p><code>evidtrail verify</code> fails a pull request whose commits do not state how they were produced, like a DCO check for <code>Signed-off-by</code>. <code>AI-Mode: none</code> passes; a repository-wide default does not.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🧵</div>
+                        <h3>Traceable to the session</h3>
+                        <p>Opt in, and AI commits carry <code>AI-Session</code>, the id of the agent session that produced them. <code>evidtrail trail &lt;commit&gt;</code> finds the transcript on your machine without opening it.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">⚖️</div>
                         <h3>Autonomy, not the binary</h3>
-                        <p>Two orthogonal axes: what level of AI participated (autocomplete / assisted / agent) and how we know. Cohort tables render only where real evidence backs them — an assumption never becomes a table.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🎯</div>
-                        <h3>Declared provenance</h3>
-                        <p>The commit hook stamps a mode when <code>EVIDTRAIL_MODE</code>, a supported agent environment, or a team-configured default determines it. When evidtrail cannot know, it writes nothing — <code>unknown</code> remains honest.</p>
+                        <p>Two axes: what level of AI participated (autocomplete / assisted / agent) and how we know (declared / inferred / none). The report opens with them. An assumption never becomes evidence.</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">💬</div>
                         <h3>PR Comments</h3>
-                        <p>Post evidtrail reports directly on pull requests and merge requests. GitHub Actions and GitLab CI are supported; comments are explicit network operations that require a token.</p>
+                        <p>One line on the pull request when every commit carries provenance, the gap in the open when it does not. GitHub Actions and GitLab CI are supported.</p>
                     </div>
                     <div class="feature-card">
-                        <div class="feature-icon">🚀</div>
-                        <h3>CI/CD Ready</h3>
-                        <p>Use the documented workflow with full Git history and scoped token permissions. It runs on every PR and updates its own comment automatically.</p>
+                        <div class="feature-icon">📉</div>
+                        <h3>Change signals, as an appendix</h3>
+                        <p>How often files are touched again, reverts and hotfixes, and their trend. Churn, not a quality score: mistakes an agent fixes inside its session never reach git.</p>
                     </div>
                 </div>
             </div>
@@ -245,8 +255,8 @@
                     <div class="step">
                         <div class="step-number">3</div>
                         <div class="step-content">
-                            <h3>Run analysis</h3>
-                            <code>evidtrail collect --since 30d && evidtrail analyze && evidtrail report</code>
+                            <h3>Set up and run</h3>
+                            <code>evidtrail init && evidtrail --since 90d</code>
                         </div>
                     </div>
                 </div>
@@ -301,6 +311,7 @@
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; - <span class="yaml-key">uses:</span> ceccode/evidtrail@v1</div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">with:</span></div>
                             <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">comment:</span> true</div>
+                            <div class="terminal-line">&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; <span class="yaml-key">require-provenance:</span> declared</div>
                         </div>
                     </div>
                 </div>
@@ -317,9 +328,13 @@
                 <p class="faq-lead">evidtrail does <strong>not</strong> infer productivity, defects, deployment, causality, capitalization, or developer performance from git history. It records what git can actually establish, with the limits kept visible.</p>
                 <dl class="faq-list">
                     <dt>Does evidtrail measure developer productivity or the ROI of AI coding tools?</dt>
-                    <dd>No. It records <em>provenance</em> — who or what wrote a commit, and how that is known — and <em>change signals</em> — how often files are touched again within a fixed horizon. Nothing in git history can establish productivity or value, so evidtrail does not claim it.</dd>
+                    <dd>No. It records <em>provenance</em> — who or what wrote a commit, and how that is known — and, as an appendix, <em>change signals</em> — how often files are touched again within a fixed horizon. Nothing in git history can establish productivity or value, so evidtrail does not claim it.</dd>
+                    <dt>Does it tell me whether AI-written code is good?</dt>
+                    <dd>No. Mistakes an agent makes and fixes inside its session never reach git, so git history cannot answer that. The change signals are churn, and the report says so before showing them.</dd>
+                    <dt>Can a pull request be required to declare AI use?</dt>
+                    <dd>Yes. <code>evidtrail verify</code>, or the Action input <code>require-provenance</code>, fails a pull request whose commits do not state how they were produced, the way a DCO check requires <code>Signed-off-by</code>.</dd>
                     <dt>How does it know a commit came from an AI agent, without anyone labelling commits?</dt>
-                    <dd>A <code>prepare-commit-msg</code> hook, installed once per clone or automatically through a <code>package.json</code> <code>prepare</code> script, detects agent sessions (Claude Code, Cursor) from their environment and stamps an <code>AI-Mode</code> trailer. Tool co-author trailers are read as well. A commit with no signal stays <code>unknown</code> — it is never assumed to be human.</dd>
+                    <dd>A <code>prepare-commit-msg</code> hook, installed once per clone or automatically through a <code>package.json</code> <code>prepare</code> script, detects agent sessions (Claude Code, Cursor) from their environment and stamps <code>AI-Mode</code> and <code>Assisted-by</code> trailers. <code>Assisted-by</code> written by people and tool co-author trailers are read as well. A commit with no signal stays <code>unknown</code> — it is never assumed to be human.</dd>
                     <dt>Why does it sometimes refuse to show a comparison?</dt>
                     <dd>Because the comparison would describe an assumption, not the repository. Cohort tables appear only where at least one commit carries real evidence. A configured prior can place commits in a cohort, but it never creates a table on its own, never raises coverage, and is always labelled <em>assumed</em>.</dd>
                     <dt>Why is the most recent month left out of the trend?</dt>
@@ -334,14 +349,14 @@
 
         <section class="cta">
             <div class="container">
-                <h2>Ready to make AI evidence auditable?</h2>
-                <p>Start with the repository signals Git can support — and keep their limits visible.</p>
+                <h2>Who will need to prove what AI produced?</h2>
+                <p>A year from now, who will need to prove what AI produced in their repository, and to whom? If you have an answer, or think nobody will, tell us.</p>
                 <div class="cta-actions">
                     <a href="https://github.com/ceccode/evidtrail" class="btn btn-primary">
                         Get Started
                     </a>
-                    <a href="https://github.com/ceccode/evidtrail#contributing" class="btn btn-secondary">
-                        Contribute
+                    <a href="https://github.com/ceccode/evidtrail/discussions" class="btn btn-secondary">
+                        Answer in Discussions
                     </a>
                 </div>
             </div>

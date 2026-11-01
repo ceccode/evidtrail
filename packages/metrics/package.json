@@ -1,7 +1,7 @@
 {
   "name": "@evidtrail/metrics",
   "version": "1.2.0",
-  "description": "Deterministic rapid-retouch, trend, cohort, and outcome metrics for evidtrail. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
+  "description": "Deterministic provenance coverage and change signals (rapid retouch, trend, cohorts, outcomes) for evidtrail. AI provenance for git: declared at commit time, checked in CI, traceable to the agent session. Honest about what git cannot prove.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -32,14 +32,15 @@
   "keywords": [
     "ai",
     "ai-attribution",
+    "ai-provenance",
+    "ai-disclosure",
+    "assisted-by",
     "provenance",
     "git",
-    "engineering-metrics",
     "ai-coding",
     "claude-code",
     "github-copilot",
     "cursor",
-    "devex",
     "metrics"
   ],
   "author": "Francesco Falanga <falanga.fra@gmail.com>",

@@ -1,7 +1,7 @@
 {
   "name": "@evidtrail/core",
   "version": "1.3.0",
-  "description": "Git collection, two-axis AI attribution (mode × evidence), and versioned schemas for evidtrail. An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.",
+  "description": "Git collection, two-axis AI provenance (mode × evidence), Assisted-by and AI-Session trailers, and versioned schemas for evidtrail. AI provenance for git: declared at commit time, checked in CI, traceable to the agent session. Honest about what git cannot prove.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -12,14 +12,15 @@
   "keywords": [
     "ai",
     "ai-attribution",
+    "ai-provenance",
+    "ai-disclosure",
+    "assisted-by",
     "provenance",
     "git",
-    "engineering-metrics",
     "ai-coding",
     "claude-code",
     "github-copilot",
     "cursor",
-    "devex",
     "schema"
   ],
   "author": "Francesco Falanga <falanga.fra@gmail.com>",

@@ -1,7 +1,7 @@
-<h1 align="center">📊 evidtrail</h1>
+<h1 align="center">evidtrail</h1>
 
 <p align="center">
-  <strong>An auditable ledger of AI provenance and change signals for your git repositories — honest about what git can and cannot prove.</strong><br/>
+  <strong>AI provenance for git: declared at commit time, checked in CI, traceable to the agent session. Honest about what git cannot prove.</strong><br/>
   <sub>formerly AIDA Metrics</sub>
 </p>
 
@@ -18,7 +18,7 @@
   <a href="#installation">Install</a> •
   <a href="#usage">Usage</a> •
   <a href="#ai-detection">AI Detection</a> •
-  <a href="#metrics">Metrics</a> •
+  <a href="#metrics">Report</a> •
   <a href="#cicd-integration">CI/CD</a> •
   <a href="https://ceccode.github.io/evidtrail/">Website</a> •
   <a href="CONTRIBUTING.md">Contributing</a>
@@ -28,9 +28,13 @@
 
 ## Why evidtrail?
 
-AI coding assistants are increasingly part of development workflows, but Git evidence is partial and easy to over-interpret. evidtrail is for teams that need a bounded, auditable record of what their repository can actually establish — not a productivity score for people or models.
+More and more code is written by AI agents, and git keeps almost no record of it. Some commits carry a co-author line, many carry nothing, and nobody can check after the fact. evidtrail makes each commit state how it was produced, and checks that it did.
 
-Here, **accounting means keeping a traceable ledger of evidence, scope, assumptions, and outcomes**. It does not mean that repository history alone can establish financial value. The ledger is the foundation on which later, explicitly modelled cost estimates can be built.
+- **At commit time**, a git hook writes the autonomy level (`AI-Mode:`) and the tool (`Assisted-by:`, the trailer the Linux kernel, Fedora and LLVM ask for). If you opt in, it also writes the agent session the commit came from (`AI-Session:`). Nobody has to remember anything.
+- **In CI**, `evidtrail verify` fails a pull request whose commits do not state their provenance, the way a DCO check fails a commit without `Signed-off-by`.
+- **In the report**, provenance comes first: how much of the history is declared, inferred or silent. Silence stays `unknown`. It is never counted as human.
+
+The report answers these questions:
 
 - Which commits state how they were produced, and which say nothing?
 - Which autonomy modes are declared, inferred, or unknown?
@@ -38,6 +42,8 @@ Here, **accounting means keeping a traceable ledger of evidence, scope, assumpti
 - After the commit: how often are files touched again, reverted, or hotfixed?
 
 The first three are questions git can answer, and they lead the report. The last one is an appendix. It is useful for spotting where to look, and it cannot tell you whether AI-written code is good.
+
+evidtrail is for teams and maintainers who may have to show what AI produced in their repository: a project with an AI contribution policy, a company answering an audit, a team tracing a change back to the session that made it. It is not a productivity score for people or models.
 
 ### What evidtrail is not
 
@@ -60,9 +66,11 @@ The `AI-Mode:` trailer never carried the tool's name, so provenance already writ
 
 - **Provenance, not guesses** — Declared, inferred, and missing evidence remain distinct; `unknown` is never silently called human
 - **A provenance check for CI** — `evidtrail verify` fails a pull request whose commits do not state how they were produced; a repo-wide prior never passes it
+- **Reads the disclosure others already use** — `Assisted-by:` (Linux kernel, Fedora, LLVM) counts as a declaration, next to evidtrail's own `AI-Mode:`; the hook writes both
+- **Commit-to-session link (opt-in)** — an `AI-Session:` trailer points an AI commit at the agent session that produced it; `evidtrail trail` follows it without opening the transcript
 - **Autonomy when stated** — `none` / `autocomplete` / `assisted` / `agent` describes the declared level of participation, separately from how evidtrail knows
 - **Configurable tool signals** — Add custom AI tools via `.evidtrail.json` or CLI flags; a tool signal proves involvement, not a precise autonomy mode
-- **Bounded Change Signals** — Fixed-horizon rapid-retouch rates with eligible and too-recent counts
+- **Change signals, as an appendix** — Fixed-horizon rapid-retouch rates, reverts and hotfixes, with eligible and too-recent counts; churn, not a quality score
 - **Explicit Scope** — Default-branch ancestry by default; all refs and PR ranges are opt-in and labelled
 - **Evidence-gated cohorts** — Autonomy and baseline overlays appear only when real evidence supports an honest comparison
 - **Fast & Deterministic** — A metrics artifact is reproducible from the same collected snapshot; schemas reject incompatible inputs
@@ -88,23 +96,32 @@ pnpm install
 pnpm build
 ```
 
-## Core Metrics
+## What the report shows
 
-1. **Rapid retouch (repo-level), and its trend**
-   The share of eligible files touched again within 7, 30, and 90 days. A file is eligible after a qualifying retouch, or after it has remained untouched for the full horizon; unresolved recent files are reported separately. This is a churn signal, not proof of a defect or wasted work.
+1. **Provenance**
+   The share of commits that state how they were produced (`declared`), that evidtrail can attribute from a co-author or tool name (`inferred`), and that say nothing. Then the autonomy level of each commit, and how many AI commits link to an agent session. `unknown` stays a real answer, and a repository-wide default never counts as evidence.
 
-2. **Attribution and autonomy coverage**
-   What the commit history declares or permits evidtrail to infer, with `unknown` retained as a real answer. Tool identity proves involvement, not a precise autonomy mode.
+2. **Change signals (appendix)**
+   How often files are touched again within 7, 30 and 90 days, reverts, hotfixes, and their trend over time. These are churn signals, not a quality score: mistakes an agent fixes inside its session never reach git.
 
 3. **Cohort overlays**
-   The same fixed-horizon signal by autonomy or AI/baseline cohort, shown only when evidence backs the cohorts and with task mix visible.
+   The same change signals by autonomy level, or AI against a baseline, shown only when real evidence backs both sides.
 
-The report outputs a side-by-side table:
+This is the opening of the report on this repository, which is written by an agent:
 
 ```markdown
-| Metric | AI commits | Human baseline | Delta |
-|---|---:|---:|---:|
-| Retouched within 30d | 21.4% (12/56) | 24.1% (7/29) | −2.7 pt |
+## Provenance
+
+**100.0% of commits carry provenance evidence** — declared 39 · inferred 11 · none 0 (0.0%).
+
+**2 of the 39 AI commits link to an agent session** (1 distinct).
+
+| Autonomy level | Commits |
+|---|---:|
+| agent | 39 |
+| none (hand-written) | 0 |
+| unknown | 0 |
+| _automated (no cohort)_ | 11 |
 ```
 
 > evidtrail reports observations and their limits. It does not turn correlation into causality.
@@ -572,20 +589,7 @@ evidtrail analyze --default-mode none --coverage-threshold 0.8
 
 ## Metrics
 
-### Quality Over Time
-
-The comparator that replaces cohorts ([#77](https://github.com/ceccode/evidtrail/issues/77) step 3). Once AI participates in nearly every commit, "AI vs human" has no second side left — `No baseline cohort` becomes the normal outcome, not bad luck. What still answers *"is this getting better or worse?"* is the repo compared with **its own past**.
-
-`metrics.trend` slices the same repo-level change signal by calendar period (month or quarter), derived from the commit stream in a single run — a team gets a trend the first time they run evidtrail, not after months of archiving reports.
-
-Two mechanisms keep it honest, because the naive version is guaranteed to lie:
-
-- **Every period is measured through the same observation window** (`--trend-window`, default 30 days). A period from last year would otherwise accumulate survival simply by having existed longer. This is the age-normalization of [#29](https://github.com/ceccode/evidtrail/issues/29), applied to time instead of cohorts.
-- **A period is *mature* only once it has been over for that full window.** Before then its files have had less time to be reworked than every earlier period. Immature periods are reported and marked, never compared — without this, *every report ever generated* would find quality declining, because the newest period is always the least observed.
-
-When fewer than two mature periods exist, evidtrail says so instead of drawing a line through one point.
-
-### Autonomy
+### Provenance and autonomy
 
 The primary model ([#25](https://github.com/ceccode/evidtrail/issues/25)). Every commit is described on **two orthogonal axes**:
 
@@ -609,6 +613,23 @@ Coverage is reported over **two windows** ([#52](https://github.com/ceccode/evid
 `defaultMode` lets a team consciously assign no-evidence commits to an autonomy level (`none` for traditional repos, `assisted`/`agent` for AI-first ones). The prior affects cohort metrics but never coverage: an assumption is not evidence, so a repo leaning on it still reports how little it actually knows, and an assumed baseline is labeled as such.
 
 **A prior can never create an overlay on its own** ([#77](https://github.com/ceccode/evidtrail/issues/77) step 4). A cohort whose every commit was placed there by `defaultMode` is the assumption describing itself, so the report withholds it — with an explanation, never silently — and says the same for an AI-vs-baseline comparison where one side is pure prior. One commit with real evidence is enough to unlock the overlay, with the prior's share still labelled `(N assumed)`. The cohorts stay in `metrics.json` either way: the gate is on presentation, not on collection.
+
+### Change signals
+
+Everything below is the report's appendix. It describes what happens to code after it lands: retouches, reverts, hotfixes, PR outcomes. These numbers are useful for deciding where to look. They do not measure whether AI-written code is good, because the mistakes an agent makes and fixes inside its session never reach git ([Between the Commits](https://arxiv.org/abs/2609.29744)).
+
+### Trend
+
+The comparator that replaces cohorts ([#77](https://github.com/ceccode/evidtrail/issues/77) step 3). Once AI participates in nearly every commit, "AI vs human" has no second side left — `No baseline cohort` becomes the normal outcome, not bad luck. What can still be compared is the repo with **its own past**: is code being touched again more or less often than before. That is a change in churn, not proof of a change in quality.
+
+`metrics.trend` slices the same repo-level change signal by calendar period (month or quarter), derived from the commit stream in a single run — a team gets a trend the first time they run evidtrail, not after months of archiving reports.
+
+Two mechanisms keep it honest, because the naive version is guaranteed to lie:
+
+- **Every period is measured through the same observation window** (`--trend-window`, default 30 days). A period from last year would otherwise accumulate survival simply by having existed longer. This is the age-normalization of [#29](https://github.com/ceccode/evidtrail/issues/29), applied to time instead of cohorts.
+- **A period is *mature* only once it has been over for that full window.** Before then its files have had less time to be reworked than every earlier period. Immature periods are reported and marked, never compared — without this, *every report ever generated* would find quality declining, because the newest period is always the least observed.
+
+When fewer than two mature periods exist, evidtrail says so instead of drawing a line through one point.
 
 ### By Autonomy Level
 
@@ -700,7 +721,7 @@ A pooled AI-vs-baseline delta can hide a task-mix confound: if AI mostly touches
 
 ### Outcome Correlation
 
-Whether AI-generated code causes more rework is the highest-value question for engineering leadership — but most of it (incidents, vulnerabilities) lives outside git, in PagerDuty/Jira/SAST tools, and pulling those in would need network access evidtrail deliberately doesn't have for its core commands ([#26](https://github.com/ceccode/evidtrail/issues/26)). Scoped to what git itself can answer:
+Whether AI-generated code causes more rework cannot be settled from git: most of the evidence (incidents, vulnerabilities) lives outside it, in PagerDuty/Jira/SAST tools, and pulling those in would need network access evidtrail deliberately doesn't have for its core commands ([#26](https://github.com/ceccode/evidtrail/issues/26)). Scoped to what git itself can answer:
 
 - **Reverts**: a `git revert` writes "This reverts commit \<sha\>." into the generated commit's body — parsed at collect time into `revertsCommit`. `metrics.json`'s `outcomeCorrelation.reverts` reports how many were found and resolved, broken down by the **reverted** commit's attribution and autonomy mode.
 - **Hotfixes**: commits matching a `fix`/`hotfix`/`patch` subject convention. Each is linked to the most recent prior commit that touched the same file(s), within a window (default 7 days, `--hotfix-window`) — the closest antecedent across all its files, so a hotfix touching several files links to whichever was most recently disturbed. `outcomeCorrelation.hotfixes` reports totals, how many were linked, and the antecedent's attribution/mode.
@@ -903,25 +924,27 @@ Bitbucket is currently out of scope ([#17](https://github.com/ceccode/evidtrail/
 - **v0.26** ✅ Quality over time, step 3 ([#77](https://github.com/ceccode/evidtrail/issues/77)): `metrics.trend` — per-period persistence, rework and coverage derived from the commit stream in a single run, every period measured through the same observation window, immature periods reported but never compared.
 - **v0.27** ✅ Overlay gating, step 4 ([#77](https://github.com/ceccode/evidtrail/issues/77)) — cohort tables render only where real evidence backs them; a `defaultMode` prior can no longer conjure an autonomy cohort or a baseline comparison out of assumption alone. Completes the quality-first migration.
 - **v1.0** ✅ Security and measurement contract: shell-free Git execution, default-branch scope, snapshot-bound schema v3, deterministic analysis, fixed-horizon rapid retouch, complete/labelled PR collection, and minimum-permission CI.
-- **Post-1.0** → Confidence intervals and minimum-sample guidance; explicit deployment/change-management joins for teams that need production scope; provider parity; removal of deprecated raw follow-up summaries in the next major version.
-- **AI cost scenarios** → Separate exact provider receipts, team-declared usage, and clearly labelled modelled estimates. A source diff or LOC may inform a counterfactual scenario, but never prove real token use, actual spend, or an accounting value.
-- **Exploratory accounting layer** → Scenario-based token and cost estimates, clearly separated from observed evidence. A first model may assume all AI-attributed output was generated by AI and expose model price, tokenization, input/output multiplier, retries, and uncertainty as user-controlled assumptions. It must report a range and provenance for every assumption—never present lines of code as measured token consumption or estimated cost as booked financial value.
+- **v1.1** ✅ `init` and `doctor` for the first ten minutes; a one-line PR comment that only grows when commits lack provenance.
+- **v1.2** ✅ Renamed from AIDA Metrics to evidtrail. In 1.2.1, observation stops at `--until`, and the trend says when two periods are too different in size to compare.
+- **v1.3** ✅ Provenance first: `Assisted-by:` read and written ([#107](https://github.com/ceccode/evidtrail/pull/107)), `evidtrail verify` and a report that opens with Provenance ([#108](https://github.com/ceccode/evidtrail/pull/108)), commit-to-session links with `AI-Session:` and `evidtrail trail` ([#109](https://github.com/ceccode/evidtrail/pull/109)).
+- **Next** → Depends on who needs provenance, and for what. Candidates: session ids for agents other than Claude Code, `verify` for GitLab, and following the trailer conventions the ecosystem settles on. The change signals are maintained, not extended.
 
-### Direction: from AI detection to AI accountability
+### Direction: from measuring AI code to stating its provenance
 
-In an AI-first world, "was this commit written by AI?" is becoming the wrong question — the honest answer trends toward "yes, mostly". evidtrail's direction reflects that:
+Until 1.2 the main question was *"does AI-written code hold up?"*, answered with churn from git history. That question turned out to sit mostly outside git: an agent's mistakes are made and fixed inside its session, and churn says little about accuracy ([Between the Commits](https://arxiv.org/abs/2609.29744)). So the direction changed:
 
-- **Autonomy as the primary axis** — involvement × evidence ([#25](https://github.com/ceccode/evidtrail/issues/25)) replaced the three-state attribution as the model; the three states survive as a projection for the headline ([#34](https://github.com/ceccode/evidtrail/issues/34)). **Coverage** — now measured on the evidence axis — stays the first number in every output ("62% known provenance · 38% no evidence" is a data-quality signal, not something to hide inside a default), because the no-evidence bucket grows fastest exactly where the numbers are taken most seriously. The `defaultMode` prior lets AI-first teams opt into an assumed autonomy level, consciously, without it ever counting as evidence.
-- **Quality over adoption** — the durable question is not "how much code is AI?" but "does AI code hold up?": rework rate ([#22](https://github.com/ceccode/evidtrail/issues/22)), line-level survival ([#23](https://github.com/ceccode/evidtrail/issues/23)), outcome correlation ([#26](https://github.com/ceccode/evidtrail/issues/26)).
-- **Autonomy over the binary** — autocomplete vs assisted vs agent ([#25](https://github.com/ceccode/evidtrail/issues/25)) has replaced AI/non-AI as the model. The binary remains available as a projection, not as the thing being measured.
-- **Shrink the unknown at the source** — the attribution manifest ([#10](https://github.com/ceccode/evidtrail/issues/10)) makes attribution declarative retroactively; commit-time stamping via git hooks ([#61](https://github.com/ceccode/evidtrail/issues/61)) makes it automatic going forward. Both shipped.
-- **Cohorts, not people** — evidtrail compares groups of commits, never developers. No per-author aggregation will ever ship, and author identity can be redacted from output artifacts ([#35](https://github.com/ceccode/evidtrail/issues/35), shipped) so the data model doesn't hand anyone a leaderboard for free.
+- **Provenance over quality** — what git can answer is what each commit states about how it was produced. The report opens with that, and the change signals become an appendix that says what it cannot show.
+- **Use the conventions that exist** — `Assisted-by:` is what the Linux kernel, Fedora and LLVM ask contributors to write. evidtrail reads it and writes it, next to its own `AI-Mode:`, instead of asking everyone to adopt a private format.
+- **Make it checkable** — `evidtrail verify` turns provenance into a CI check, like DCO does for `Signed-off-by`. A repository-wide default never passes it.
+- **Point to where the evidence is** — when the interesting part happened in the session, the commit should say which session. `AI-Session:` is opt-in per person, and evidtrail never reads the transcript.
+- **Autonomy over the binary** — `none` / `autocomplete` / `assisted` / `agent` × `declared` / `inferred` / `none` ([#25](https://github.com/ceccode/evidtrail/issues/25)) is the model. The AI/human/unknown view remains as a projection.
+- **Cohorts, not people** — evidtrail compares groups of commits, never developers. No per-author aggregation will ever ship, and author identity can be redacted from output artifacts ([#35](https://github.com/ceccode/evidtrail/issues/35)).
 
 ## Contributing
 
 This is just the starting point. We are looking for contributors who can help with:  
 
-- Designing robust metrics  
+- Provenance conventions and other agents' session ids  
 - Building integrations
 - Improving analysis pipelines  
 - Validating approaches with real-world projects  
@@ -965,21 +988,16 @@ We use a simple, main-branch workflow with automated publishing:
 
 ### AI Attribution Convention
 
-If you use AI assistants (Claude, Copilot, ChatGPT, Cursor, Windsurf, etc.) while contributing, please add a `Co-Authored-By` trailer to your commit messages:
+`pnpm install` installs the commit hook through the `prepare` script. Inside Claude Code or Cursor it writes `AI-Mode:` and `Assisted-by:` for you; elsewhere `.evidtrail.json` sets the default mode for this repository. If you write a commit without the hook, add the trailer yourself and only state what is true:
 
 ```bash
 git commit -m "feat: add new feature
 
-Co-Authored-By: Claude <noreply@anthropic.com>"
+AI-Mode: assisted
+Assisted-by: GitHub Copilot"
 ```
 
-Common trailers:
-
-- `Co-Authored-By: Claude <noreply@anthropic.com>`
-- `Co-Authored-By: GitHub Copilot <noreply@github.com>`
-- `Co-Authored-By: ChatGPT <noreply@openai.com>`
-
-This helps evidtrail accurately track AI contribution metrics — and it's what we're building this tool to measure.
+Co-author trailers such as `Co-Authored-By: Claude <noreply@anthropic.com>` are read as well. [AGENTS.md](AGENTS.md) has the full rules.
 
 ### Branch Rules
 
@@ -992,10 +1010,11 @@ Feel free to open an **Issue** or start a **Discussion**.
 
 ## Call to Action
 
-AI participation in software work is becoming ambient.
-To account for it properly, we need evidence with visible limits.
+AI now writes most of the code in many repositories, and git barely records it. Before building further, this project wants to know one thing:
 
-**Join us in building evidtrail.**
+**A year from now, who will need to prove what AI produced in their repository, and to whom?**
+
+If you have an answer, or a reason to think nobody will, open a [Discussion](https://github.com/ceccode/evidtrail/discussions).
 
 ## Development
 
