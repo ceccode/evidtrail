@@ -32,14 +32,16 @@ AI coding assistants are increasingly part of development workflows, but Git evi
 
 Here, **accounting means keeping a traceable ledger of evidence, scope, assumptions, and outcomes**. It does not mean that repository history alone can establish financial value. The ledger is the foundation on which later, explicitly modelled cost estimates can be built.
 
+- Which commits state how they were produced, and which say nothing?
 - Which autonomy modes are declared, inferred, or unknown?
-- How often are files touched again within a fixed horizon?
-- Are reverts or hotfix patterns over-represented for a cohort?
-- Is the evidence coverage high enough to compare cohorts at all?
+- Can a pull request be required to state its provenance, the way a DCO check requires Signed-off-by?
+- After the commit: how often are files touched again, reverted, or hotfixed?
+
+The first three are questions git can answer, and they lead the report. The last one is an appendix. It is useful for spotting where to look, and it cannot tell you whether AI-written code is good.
 
 ### What evidtrail is not
 
-evidtrail does **not** infer productivity, defects, deployment, causality, capitalization, or developer performance from Git history. It does not estimate the value of software. Any number in a report is bounded by what the repository can actually establish, and the report says so next to the number.
+evidtrail does **not** infer productivity, defects, deployment, causality, capitalization, or developer performance from Git history. It does not measure the quality of AI-written code either: most of an agent's mistakes are found and fixed inside its session, before anything is committed, so they leave no trace in history ([Between the Commits](https://arxiv.org/abs/2609.29744) shows this on a codebase written entirely by Claude). It does not estimate the value of software. Any number in a report is bounded by what the repository can actually establish, and the report says so next to the number.
 
 ### Renamed from AIDA Metrics
 
@@ -57,6 +59,7 @@ The `AI-Mode:` trailer never carried the tool's name, so provenance already writ
 ## Features
 
 - **Provenance, not guesses** — Declared, inferred, and missing evidence remain distinct; `unknown` is never silently called human
+- **A provenance check for CI** — `evidtrail verify` fails a pull request whose commits do not state how they were produced; a repo-wide prior never passes it
 - **Autonomy when stated** — `none` / `autocomplete` / `assisted` / `agent` describes the declared level of participation, separately from how evidtrail knows
 - **Configurable tool signals** — Add custom AI tools via `.evidtrail.json` or CLI flags; a tool signal proves involvement, not a precise autonomy mode
 - **Bounded Change Signals** — Fixed-horizon rapid-retouch rates with eligible and too-recent counts
@@ -244,6 +247,20 @@ Generate human-readable reports:
 ```bash
 evidtrail report --out-dir ./evidtrail-output
 ```
+
+The report opens with **Provenance**: coverage, how much of it is declared, and the autonomy table. **Change Signals** follows with its limit stated first: retouch, line survival, reverts, hotfixes and the per-autonomy comparisons are churn signals, not a quality score.
+
+#### `evidtrail verify`
+
+Fail when collected commits do not state their provenance. It reads the stream `collect` wrote, so for a pull request run `collect --pr` (or `--diff-base origin/main`) first:
+
+```bash
+evidtrail collect --diff-base origin/main
+evidtrail verify                     # every commit declares: AI-Mode or the manifest
+evidtrail verify --require evidence  # any signal at all, a co-author line included
+```
+
+`AI-Mode: none` passes: the check asks that provenance be stated, not that it be AI. Merge commits and known bots are skipped. A `defaultMode` prior never passes, because a repository setting is not a statement about one commit. Exit codes: `0` all stated, `1` some commits state nothing, `2` the check could not run.
 
 ### Options
 
@@ -538,7 +555,7 @@ They are separate because they fail separately. `mode: unknown, evidence: inferr
 
 `declared` means someone stated it: the `AI-Mode:` or `Assisted-by:` trailer, or the attribution manifest. `inferred` means evidtrail concluded it from tool identity or commit structure. Automation ([#39](https://github.com/ceccode/evidtrail/issues/39) — merge commits, known bots, manifest `excluded_commits`) is a third, orthogonal flag: its provenance is known, so it counts toward coverage, but it joins no autonomy cohort, because automation is not authored code.
 
-**Coverage** = share of commits with any evidence at all (`declared` + `inferred`). It gates the *attribution-dependent* sections, not the report: repository-level change signals need no attribution evidence and open the report, while coverage lives in a Data Quality section at the end.
+**Coverage** = share of commits with any evidence at all (`declared` + `inferred`). It opens the report, in the Provenance section, and gates the *attribution-dependent* parts of Change Signals. The repository-level rows there need no attribution evidence and do not move with it.
 
 **The three-state view survives as a projection.** `ai` (mode above `none`), `human` (declared `none`), `automated`, `unknown` (no evidence) are derived from the axes above — never decided independently — and kept because a headline needs one word. The rich model underneath, the one-line summary on top.
 
@@ -623,7 +640,7 @@ Kept in its own opt-in command because it runs one git process per file — the 
 
 Persistence is computed for the baseline (autonomy level `none`) cohort as well.  
 The `metrics.json` output includes `baseline` and `delta` (AI minus baseline) sections.  
-The markdown report renders the side-by-side table under `## AI vs Baseline`, below Repository Change Signals — the comparison is a lens, not the headline ([#77](https://github.com/ceccode/evidtrail/issues/77)).
+The markdown report renders the side-by-side table under `### AI vs Baseline`, inside Change Signals — the comparison is a lens, not the headline ([#77](https://github.com/ceccode/evidtrail/issues/77)).
 If no commits sit at autonomy level `none` and no `defaultMode` prior assigns the no-evidence ones, `baseline` and `delta` are `null`: evidtrail does not invent a comparison cohort. And when one side exists *only* because of the prior, the comparison is withheld with an explanation rather than shown — a measured cohort against an assumed one yields a delta that describes the prior, not the repo.
 
 ### Fair Comparison (age-normalized)
@@ -713,6 +730,14 @@ This is what lands on the pull request when every commit carries provenance — 
 </p>
 
 When commits lack provenance the line turns to ⚠️ with the count and coverage, followed by the commits themselves and the one-line repair. Nothing is repeated on every PR that does not need to be read on every PR.
+
+To make provenance a requirement rather than a comment, set `require-provenance`. The job then fails on a pull request with a commit that states nothing, after the comment has been posted:
+
+```yaml
+  - uses: ceccode/evidtrail@v1
+    with:
+      require-provenance: declared   # or `evidence` to accept any signal
+```
 
 If you prefer to run the steps yourself, the job that posts comments needs `contents: read` and `pull-requests: write`; organizations that default `GITHUB_TOKEN` to read-only must declare these permissions explicitly.
 

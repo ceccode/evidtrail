@@ -100,29 +100,35 @@ describe('collect → analyze → report end to end', () => {
 
     const report = readFileSync(join(outDir, 'report.md'), 'utf-8');
     expect(report).toContain('# evidtrail Report');
-    // Quality first (#77 step 2): the repo-level section opens the report,
-    // the autonomy lens follows, coverage sits at the bottom as Data Quality
-    expect(report).toContain('## Repository Change Signals');
-    expect(report).toContain('## Autonomy');
-    expect(report).toContain('## Data Quality');
-    expect(report.indexOf('## Repository Change Signals')).toBeLessThan(report.indexOf('## Autonomy'));
-    expect(report.indexOf('## Data Quality')).toBeGreaterThan(report.indexOf('## By Autonomy Level'));
+    // Provenance first. #77 step 2 opened the report on the repository
+    // retouch rate because it needs no attribution evidence. In practice
+    // readers took that first number, and its trend, as the verdict on
+    // AI-written code, which git cannot give: an agent's mistakes are mostly
+    // fixed inside its session. So the section git can answer leads, and
+    // every churn signal sits under Change Signals with that limit stated.
+    expect(report).toContain('## Provenance');
+    expect(report).toContain('## Change Signals');
+    expect(report.indexOf('## Provenance')).toBeLessThan(report.indexOf('## Change Signals'));
+    expect(report.indexOf('## Change Signals')).toBeLessThan(report.indexOf('### Repository'));
+    expect(report).toContain('not a quality score');
+    expect(report).not.toContain('## Data Quality');
     // The autonomy breakdown is the primary table (#25), and the three-state
     // view is labelled as the projection it is
     expect(report).toContain('| Autonomy level | Commits |');
     expect(report).toContain('*Three-state view:*');
-    expect(report).toContain('## By Autonomy Level');
-    // The trend lives inside Repository Change Signals
-    expect(report).toContain('### Trend (monthly, 30-day observation window)');
+    expect(report.indexOf('| Autonomy level | Commits |')).toBeLessThan(report.indexOf('## Change Signals'));
+    expect(report).toContain('### By Autonomy Level');
+    // The trend is a sub-part of the repository signals, not the headline
+    expect(report).toContain('#### Trend (monthly, 30-day observation window)');
     // Every commit in this fixture was made moments ago, so no period can be
     // mature: the report must decline to compare rather than invent a trend
     expect(report).toContain('**No comparison yet**');
     expect(report).toContain('Too recent to judge');
-    expect(report).toContain('## Cohort Fairness');
+    expect(report).toContain('### Cohort Fairness');
     // The old generic-looking persistence section rendered the AI cohort's
     // numbers under a repo-level label; bounded change signals replaced it
-    expect(report).not.toContain('## Persistence (file-level survival)');
-    expect(report).toContain('### Caveats');
+    expect(report).not.toContain('Persistence (file-level survival)');
+    expect(report).toContain('## Caveats');
     // Removed metric must not resurface anywhere
     expect(report.toLowerCase()).not.toContain('merge ratio');
     // No unresolved template placeholders
@@ -137,7 +143,7 @@ describe('collect → analyze → report end to end', () => {
     });
     await run(createCommentCommand(), ['--out-dir', outDir, '--dry-run']);
     logSpy.mockRestore();
-    expect(printed.join('\n')).toContain('## Autonomy');
+    expect(printed.join('\n')).toContain('## Provenance');
   });
 
   it('applies --redact-authors through the CLI', async () => {
@@ -167,7 +173,7 @@ describe('PR acceptance (#51)', () => {
     expect(metrics.caveats.join(' ')).toContain("run 'evidtrail fetch-prs'");
 
     const report = readFileSync(join(outDir, 'report.md'), 'utf-8');
-    expect(report).not.toContain('## PR Merge Outcome');
+    expect(report).not.toContain('### PR Merge Outcome');
   });
 
   it('is computed and rendered when a pr-stream.json is present', async () => {
@@ -228,7 +234,7 @@ describe('PR acceptance (#51)', () => {
 
       await run(createReportCommand(), ['--out-dir', prDir]);
       const report = readFileSync(join(prDir, 'report.md'), 'utf-8');
-      expect(report).toContain('## PR Merge Outcome');
+      expect(report).toContain('### PR Merge Outcome');
       expect(report).toContain('Closed unmerged');
       expect(report).not.toContain('undefined');
     } finally {
