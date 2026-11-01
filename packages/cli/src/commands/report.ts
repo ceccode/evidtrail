@@ -20,10 +20,12 @@ function formatDelta(value: number, suffix: string): string {
   return `${sign}${value}${suffix}`;
 }
 
+type Persistence = Metrics['repo']['persistence'];
+
 function rapidRetouch(
-  persistence: Metrics['persistence'],
+  persistence: Persistence,
   days: number
-): Metrics['persistence']['rapidRetouch'][number] | null {
+): Persistence['rapidRetouch'][number] | null {
   return persistence.rapidRetouch.find((result) => result.windowDays === days) ?? null;
 }
 
@@ -77,8 +79,8 @@ function generatePRMarkdownReport(metrics: Metrics): string {
       : `**evidtrail** ⚠️ ${countLabel(total, 'commit')}${automatedNote} — **${countLabel(a.unknown, 'commit')} without provenance** (${coveragePct}% coverage)${modeSummary ? ` — ${modeSummary}` : ''}.`;
 
   // The exception, in the open: which commits, and the one-line repair. A
-  // repository-wide prior never closes this gap, so it is named here when
-  // configured rather than left to quietly absorb the commits into a cohort.
+  // repository-wide defaultMode never closes this gap, so it is named here
+  // when configured: a reader could otherwise assume it covers these commits.
   const gapRows = gaps
     .map(
       (commit) =>
@@ -105,7 +107,7 @@ For agent-produced work, declare \`AI-Mode: agent\` — install the hook in your
     .filter((mode) => a.modes[mode] > 0)
     .map((mode) => `| ${mode === 'none' ? 'none (hand-written)' : mode} | ${a.modes[mode]} |`);
   if (metrics.repo.commitsAutomated > 0) {
-    modeRows.push(`| _automated (no cohort)_ | ${metrics.repo.commitsAutomated} |`);
+    modeRows.push(`| _automated (not authored)_ | ${metrics.repo.commitsAutomated} |`);
   }
   const filesTouched =
     metrics.repo.persistence.filesConsidered + metrics.repo.persistence.filesExcluded;
@@ -147,161 +149,19 @@ function generateMarkdownReport(metrics: Metrics): string {
   const warnOnRecent = a.recent ? a.recent.belowThreshold : a.belowThreshold;
 
   const coverageWarning = warnOnRecent
-    ? `\n> ⚠️ **Coverage is below ${(a.coverageThreshold * 100).toFixed(0)}%${a.recent ? ` in the last ${a.recent.windowDays} days` : ''}.** The table below and the per-autonomy comparisons under Change Signals depend on this evidence and are low-confidence. The repository-level rows do not need it. Install the commit hook (\`evidtrail install-hooks\`) so new commits declare their autonomy mode, or set \`defaultMode\` in \`.evidtrail.json\` for the history that predates it.\n`
+    ? `\n> ⚠️ **Coverage is below ${(a.coverageThreshold * 100).toFixed(0)}%${a.recent ? ` in the last ${a.recent.windowDays} days` : ''}.** The table below and the breakdowns by attribution under Change Signals (outcomes, pull requests, line survival) describe only the commits that carry evidence. The repository-level rows do not need it. Install the commit hook (\`evidtrail install-hooks\`) so new commits declare how they were produced; older commits can be declared in \`evidtrail-attribution.json\`.\n`
     : '';
 
   const priorNote =
     a.defaultMode !== null && a.evidence.none > 0
-      ? `\nCommits with no evidence are **assumed \`${a.defaultMode}\`** via \`defaultMode\` — this is a prior, not observed data, and it does not count toward coverage.\n`
+      ? `\n\`defaultMode\` is \`${a.defaultMode}\`: the commit hook stamps it on new commits. It is not applied to the ${a.evidence.none} commit${a.evidence.none === 1 ? '' : 's'} above with no evidence, because a repository setting says nothing about how a past commit was produced.\n`
       : '';
-
-  // Overlay gating (#77 step 4). A cohort whose every commit was placed
-  // there by the `defaultMode` prior is not a measurement — it is the
-  // assumption describing itself, rendered as a table with numbers in it.
-  // The earlier `(N assumed)` labelling made the prior's contribution
-  // visible; this stops it from conjuring an overlay on its own. Cohorts
-  // stay in `metrics.json` either way: the gate is on presentation, not on
-  // data, so a consumer that wants the prior's view can still have it.
-  const evidenceBacked = (stats: Metrics['byMode']['agent']) =>
-    stats !== null && stats.commits - stats.assumed > 0;
-
-  const AI_MODES = ['agent', 'assisted', 'autocomplete'] as const;
-  const aiCohortHasEvidence =
-    AI_MODES.some((mode) => evidenceBacked(metrics.byMode[mode])) ||
-    evidenceBacked(metrics.byMode.unknown);
-  const baselineHasEvidence = evidenceBacked(metrics.byMode.none);
-
-  const baselineLabel = metrics.baseline?.assumed
-    ? 'Human baseline (assumed)'
-    : 'Human baseline';
-
-  const comparisonSection = metrics.baseline && metrics.delta && aiCohortHasEvidence && baselineHasEvidence
-    ? (() => {
-        const ai30 = rapidRetouch(metrics.persistence, 30);
-        const baseline30 = rapidRetouch(metrics.baseline.persistence, 30);
-        return `### AI vs Baseline
-
-Fixed-horizon outcomes compare like with like: files too recent to have reached day 30 are excluded from both denominators and reported separately.
-
-| Metric | AI commits | ${baselineLabel} | Delta |
-|---|---:|---:|---:|
-| Commits | ${metrics.persistence.commitsConsidered} | ${metrics.baseline.persistence.commitsConsidered} | — |
-| Retouched within 30d | ${formatRetouch(ai30)} | ${formatRetouch(baseline30)} | ${metrics.delta.rapidRetouch30Rate === null ? '—' : formatDelta(round1(metrics.delta.rapidRetouch30Rate * 100), ' pt')} |
-| Too recent for 30d | ${ai30?.tooRecent ?? '—'} | ${baseline30?.tooRecent ?? '—'} | — |
-`;
-      })()
-    : `### AI vs Baseline
-
-${
-      metrics.baseline && metrics.delta
-        ? `**Comparison withheld** — one side of it exists only because of the \`${a.defaultMode}\` prior: ${
-            aiCohortHasEvidence
-              ? 'every commit in the baseline cohort was placed there by assumption'
-              : 'every commit in the AI cohort was placed there by assumption'
-          }, not by evidence. A measured cohort against an assumed one yields a delta that describes the prior, not the repo. Install the commit hook (\`evidtrail install-hooks\`) so commits declare their own mode — the cohorts stay in \`metrics.json\` meanwhile.`
-        : `**No baseline available** — no commits sit at autonomy level \`none\`, so there is nothing honest to compare against. If the commits with no evidence in this repo were hand-written, set \`"defaultMode": "none"\` in \`.evidtrail.json\`.`
-    }
-`;
-
-  const categories = ['source', 'tests', 'migrations', 'config', 'docs', 'generated'] as const;
-
-  function mixCell(mix: Metrics['cohorts']['ai']['taskMix'], cat: (typeof categories)[number]) {
-    if (!mix) return '—';
-    const total = categories.reduce((sum, c) => sum + mix[c], 0);
-    return total > 0 ? `${mix[cat]} (${((mix[cat] / total) * 100).toFixed(0)}%)` : '0';
-  }
-
-  const aiCtx = metrics.cohorts.ai;
-  const baseCtx = metrics.cohorts.baseline;
-
-  function categoryRow(cat: (typeof categories)[number]) {
-    const c = metrics.byCategory[cat];
-    if (!c.ai && !c.baseline) return null;
-    return `| ${cat} | ${c.ai ? formatRetouch(c.ai.rapidRetouch30) : '—'} | ${c.baseline ? formatRetouch(c.baseline.rapidRetouch30) : '—'} |`;
-  }
-  const categoryRows = categories.map(categoryRow).filter(Boolean);
-  const byCategorySection =
-    categoryRows.length > 0
-      ? `
-
-**Within-category comparison** — 30-day rapid retouch per file category, instead of pooling everything (a mismatched task mix can't masquerade as a quality difference):
-
-| Category | AI retouched ≤30d | Baseline retouched ≤30d |
-|---|---:|---:|
-${categoryRows.join('\n')}
-`
-      : '';
-
-  // Gated only when NEITHER side has evidence — then every column would be
-  // the prior's doing. With one real cohort the table still carries its age
-  // and task mix, which is information the repo genuinely has; the empty
-  // column speaks for itself, as it did before this gate existed.
-  const fairnessSection = !(aiCohortHasEvidence || baselineHasEvidence)
-    ? ''
-    : `### Cohort Fairness
-
-Persistence comparisons are only meaningful between cohorts of similar **age** and **task mix**.
-
-| | AI cohort | Baseline cohort |
-|---|---:|---:|
-| Commits | ${aiCtx.age?.commits ?? 0} | ${baseCtx.age?.commits ?? 0} |
-| Avg age (days) | ${aiCtx.age?.avgAgeDays ?? '—'} | ${baseCtx.age?.avgAgeDays ?? '—'} |
-| Median age (days) | ${aiCtx.age?.medianAgeDays ?? '—'} | ${baseCtx.age?.medianAgeDays ?? '—'} |
-${categories.map((cat) => `| Files: ${cat} | ${mixCell(aiCtx.taskMix, cat)} | ${mixCell(baseCtx.taskMix, cat)} |`).join('\n')}
-${byCategorySection}`;
-
-  const modeOrder = ['agent', 'assisted', 'autocomplete', 'none', 'unknown'] as const;
-  const modeRows = modeOrder
-    .map((mode) => ({ mode, stats: metrics.byMode[mode] }))
-    // Gated (#77 step 4): a row with no evidence behind it is the prior
-    // talking to itself. `unknown` is exempt — it IS the no-evidence bucket,
-    // and reporting its size is the honest part.
-    .filter((row) => row.mode === 'unknown' || evidenceBacked(row.stats))
-    .filter((row) => row.stats !== null)
-    .map(
-      ({ mode, stats }) =>
-        `| ${mode} | ${stats!.commits}${stats!.assumed > 0 ? ` (${stats!.assumed} assumed)` : ''} | ${formatRetouch(rapidRetouch(stats!.persistence, 30))} | ${rapidRetouch(stats!.persistence, 30)?.tooRecent ?? '—'} |`
-    );
-  const gatedModes = modeOrder.filter(
-    (mode) => mode !== 'unknown' && metrics.byMode[mode] !== null && !evidenceBacked(metrics.byMode[mode])
-  );
-  // Three states, not two: a rendered table, an explained withholding, or
-  // nothing at all when there is genuinely no cohort data. The middle case
-  // matters — dropping the section silently would hide the fact that a prior
-  // is configured and doing nothing, which is itself worth knowing.
-  const hasAnyCohort = modeOrder.some((mode) => metrics.byMode[mode] !== null);
-  const byModeSection =
-    modeRows.length > 0
-      ? `### By Autonomy Level
-
-The comparison that stays meaningful when everything is AI-assisted: how often code is touched again, per autonomy level (automated commits excluded).
-
-Cohorts here include commits placed by the \`defaultMode\` prior, marked *assumed* — so these counts can exceed the observed ones above, which only ever report what the commits themselves declare.${
-          gatedModes.length > 0
-            ? `\n\n> ${gatedModes.length === 1 ? `The \`${gatedModes[0]}\` level is` : `The \`${gatedModes.join('`, `')}\` levels are`} not shown: every commit in ${gatedModes.length === 1 ? 'it' : 'them'} is there by prior, with no evidence behind it. The data is still in \`metrics.json\`.`
-            : ''
-        }
-
-| Mode | Commits | Retouched ≤30d | Too recent |
-|---|---:|---:|---:|
-${modeRows.join('\n')}
-
-`
-      : hasAnyCohort
-        ? `### By Autonomy Level
-
-**Withheld** — every autonomy cohort in this repo exists only because of the \`${a.defaultMode}\` prior${gatedModes.length > 0 ? ` (${gatedModes.join(', ')})` : ''}: not one commit carries evidence of the level it was written at, so a table here would be the assumption describing itself. The cohorts are still in \`metrics.json\` for anyone who wants the prior's view.
-
-Install the commit hook (\`evidtrail install-hooks\`) so commits declare their own mode — see Provenance above.
-
-`
-        : '';
 
   const ls = metrics.lineSurvival;
   const lineSection = ls
     ? `### Line Survival
 
-Exact per-line attribution from \`git blame\` — of the code alive in the collected tree, which observed commit last wrote it. Unlike file-level metrics, one AI line no longer marks a whole file. The \`defaultMode\` prior is never applied here: an assumption cannot relabel living lines.${ls.truncated ? '\n\n> ⚠️ Capped sample (`--max-files`): an evenly spaced slice of the tree, not the whole tree.' : ''}
+Exact per-line attribution from \`git blame\` — of the code alive in the collected tree, which observed commit last wrote it. Unlike file-level metrics, one AI line no longer marks a whole file.${ls.truncated ? '\n\n> ⚠️ Capped sample (`--max-files`): an evenly spaced slice of the tree, not the whole tree.' : ''}
 
 | Cohort | Lines alive | Share |
 |---|---:|---:|
@@ -399,11 +259,9 @@ ${[
     : '';
 
   // The repository block opens Change Signals because it is the only view
-  // there that needs no attribution evidence: valid at 0% coverage,
-  // untouched by the prior. It also replaces the old "Persistence (file-level survival)" section,
-  // which rendered the AI cohort's numbers under a generic-looking heading —
-  // the same defect class as the assumed-cohort and automated-mode bugs:
-  // cohort data wearing a repo-level label.
+  // there that needs no attribution evidence: valid at 0% coverage. It once
+  // replaced a "Persistence" section that rendered the AI cohort's numbers
+  // under a generic-looking heading — cohort data wearing a repo-level label.
   const rq = metrics.repo;
   const rqp = rq.persistence;
 
@@ -468,7 +326,7 @@ ${immature > 0 ? `\n*(immature)* — Too recent to judge: the period has not bee
       : '';
   const codeQualitySection = `### Repository
 
-How files change again, as a property of the **repo** — measured over all ${rq.commitsAuthored} authored commits (${rq.commitsAutomated} automated excluded). No attribution evidence required: these numbers do not move with coverage or with the \`defaultMode\` prior.
+How files change again, as a property of the **repo** — measured over all ${rq.commitsAuthored} authored commits (${rq.commitsAutomated} automated excluded). No attribution evidence required: these numbers do not move with coverage.
 
 - Files measured: ${rqp.filesConsidered} (${rqp.filesExcluded} excluded: migrations/generated)
 ${windowNote}
@@ -479,13 +337,6 @@ ${observationNote}
 ${rqp.rapidRetouch.map((result) => `| ${result.windowDays}d | ${result.retouched} | ${result.eligible} | ${result.tooRecent} | ${result.rate === null ? '—' : `${(result.rate * 100).toFixed(1)}%`} |`).join('\n')}
 ${trendSection}
 `;
-
-  const baselineDetail = metrics.baseline && baselineHasEvidence
-    ? `### ${baselineLabel}
-- Commits considered: ${metrics.baseline.persistence.commitsConsidered}; rapid retouch within 30d: ${formatRetouch(rapidRetouch(metrics.baseline.persistence, 30))}
-
-`
-    : '';
 
   // Provenance leads. It is the part of this report git can actually
   // answer: what each commit states about how it was produced. Change
@@ -520,7 +371,7 @@ ${
 | autocomplete | ${a.modes.autocomplete} |
 | none (hand-written) | ${a.modes.none} |
 | unknown | ${a.modes.unknown} |
-| _automated (no cohort)_ | ${a.automated} |
+| _automated (not authored)_ | ${a.automated} |
 
 *Three-state view:* ai ${a.ai} · human ${a.human} · automated ${a.automated} · unknown ${a.unknown} — a projection of the table above, kept for a one-word headline.
 ${priorNote}
@@ -528,8 +379,8 @@ ${priorNote}
 
 What git records after a commit: files touched again, lines still alive, reverts, hotfixes, merged pull requests. These are churn signals, not a quality score. Mistakes an agent makes and fixes inside its session never reach git, so they leave no trace here, and a rate that moves says the work changed, not why. Read them as places to look closer.
 
-${codeQualitySection}${lineSection}${outcomeSection}${prSection}${byModeSection}${comparisonSection}
-${fairnessSection}${baselineDetail}## Caveats
+${codeQualitySection}${lineSection}${outcomeSection}${prSection}
+## Caveats
 ${metrics.caveats.map((caveat) => `- ${caveat}`).join('\n')}
 `;
 }

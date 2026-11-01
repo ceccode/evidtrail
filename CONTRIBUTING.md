@@ -30,8 +30,8 @@ This repository measures itself with its own tool, so commits should say how the
 
 ## Things that look like bugs and are not
 
-- **Empty cohorts are correct.** `No baseline cohort` on an all-AI repo is the tool being honest. Do not "fix" it by inventing a comparison.
-- **A prior is not evidence.** `defaultMode` moves cohort membership; it must never raise coverage, mutate commit tags, or create a report section on its own.
+- **There is no AI-vs-human comparison of change signals.** 2.0 removed it on purpose: in most repositories one side is empty, and where both exist the gap reflects the work each group did more than the code.
+- **A prior is not evidence.** `defaultMode` is stamped by the hook on new commits and applied to nothing during analysis; it must never raise coverage, mutate commit tags, or create a report section.
 - **The most recent trend period is always immature.** It is excluded from comparisons on purpose.
 - **`unknown` is a real answer.** Absence of an AI signal is not evidence of human authorship.
 

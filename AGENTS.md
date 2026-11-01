@@ -38,9 +38,9 @@ This repository is written almost entirely by AI agents with human review, and i
 
 ## Things that look like bugs and are not
 
-- **Empty cohorts are correct.** `No baseline cohort` on an all-AI repo is the tool being honest, not failing. Do not "fix" it by inventing a comparison.
-- **A prior is not evidence.** During **analysis**, `defaultMode` moves cohort membership; it must never raise coverage, mutate historical commit tags, or create a report section on its own. At **commit time**, the installed hook may use the same repo policy to write an `AI-Mode` trailer for a new commit. Changing `.evidtrail.json` today never proves how an older untagged commit was produced.
-- **The most recent trend period is always immature.** It is excluded from comparisons on purpose — without that, every report would find quality declining.
+- **There is no AI-vs-human comparison of change signals.** 2.0 removed the cohort tables (AI vs Baseline, by autonomy level, fairness corrections) on purpose: in most repositories one side is empty, and where both exist the gap reflects the work each group did more than the code. Do not bring one back without a question it answers that provenance cannot.
+- **A prior is not evidence.** `defaultMode` acts only at **commit time**: the installed hook may use the repo policy to write an `AI-Mode` trailer for a new commit. During **analysis** it is recorded and applied to nothing — it must never raise coverage, move a commit into any group, or create a report section. Changing `.evidtrail.json` today never proves how an older untagged commit was produced.
+- **The most recent trend period is always immature.** It is excluded from comparisons on purpose — without that, every report would find retouch rising.
 - **`unknown` is a real answer.** The absence of an AI signal is not evidence of human authorship.
 
 ## The recurring defect class

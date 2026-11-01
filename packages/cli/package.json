@@ -10,8 +10,7 @@
     "dist"
   ],
   "bin": {
-    "evidtrail": "dist/index.js",
-    "aida": "dist/index.js"
+    "evidtrail": "dist/index.js"
   },
   "keywords": [
     "ai",

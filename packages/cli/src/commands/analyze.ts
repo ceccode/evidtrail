@@ -19,16 +19,10 @@ import { CLIConfig } from '../schema/config.js';
 import { HOOK_NAME, isHookInstalled } from '../hooks/detect.js';
 import { findConfigFile, loadConfig } from '../config/load.js';
 
-const MODES = ['none', 'autocomplete', 'assisted', 'agent'];
-
 export function createAnalyzeCommand(): Command {
   return new Command('analyze')
     .description('Analyze commit stream and generate metrics.json')
     .option('--out-dir <path>', 'Output directory', './evidtrail-output')
-    .option(
-      '--default-mode <value>',
-      'Prior for commits with no evidence: none | autocomplete | assisted | agent (default: no prior, or .evidtrail.json)'
-    )
     .option(
       '--coverage-threshold <fraction>',
       'Coverage below this flags metrics as low-confidence (default: 0.7, or .evidtrail.json)'
@@ -72,14 +66,10 @@ export function createAnalyzeCommand(): Command {
 
         logger.info(`Analyzing ${commitStream.commits.length} commits`);
 
-        // CLI flags override .evidtrail.json (read from the collected repo's root)
-        const fileConfig = await loadConfig(commitStream.repoPath, logger);
-        const defaultMode = options.defaultMode ?? fileConfig.defaultMode;
-        if (defaultMode && !MODES.includes(defaultMode)) {
-          throw new Error(
-            `Invalid --default-mode "${defaultMode}": expected ${MODES.join(', ')}`
-          );
-        }
+        // CLI flags override .evidtrail.json (read from the collected repo's root).
+        // `defaultMode` is only recorded: no number depends on it.
+        const fileConfig = await loadConfig(commitStream.repoPath);
+        const defaultMode = fileConfig.defaultMode;
         const coverageThreshold = options.coverageThreshold
           ? Number(options.coverageThreshold)
           : (fileConfig.coverageThreshold ?? 0.7);
@@ -212,7 +202,7 @@ export function createAnalyzeCommand(): Command {
           logger.warn(
             configured && !hooked
               ? `Coverage is below ${threshold}%: ${confidenceContext}. This repo is set up for evidtrail (.evidtrail.json) but THIS CLONE has no ${HOOK_NAME} hook, so its commits declare nothing. Run 'evidtrail install-hooks' — or add "prepare": "evidtrail install-hooks --if-git" to package.json so every clone gets it.`
-              : `Coverage is below ${threshold}%: ${confidenceContext}. Install the commit hook (evidtrail install-hooks) for future commits; repair existing provenance with truthful AI-Mode trailers or an attribution manifest. A defaultMode prior does not increase coverage.`
+              : `Coverage is below ${threshold}%: ${confidenceContext}. Install the commit hook (evidtrail install-hooks) for future commits; repair existing provenance with truthful AI-Mode trailers or an attribution manifest. defaultMode does not apply to past commits.`
           );
         }
         if (commitStream.scope !== 'pr') {
@@ -249,9 +239,6 @@ export function createAnalyzeCommand(): Command {
             logger.info(
               `Outcome correlation: ${oc.reverts.resolved}/${oc.reverts.total} reverts resolved, ${oc.hotfixes.linked}/${oc.hotfixes.total} hotfixes linked`
             );
-          }
-          if (!metrics.baseline) {
-            logger.warn('No baseline cohort: no commits attributed as human (see caveats).');
           }
         }
         logger.info(`Output written to: ${outputPath}`);

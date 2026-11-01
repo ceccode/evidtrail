@@ -35,8 +35,9 @@ export const Attribution = z.object({
   // actually carries the meaning — `unknown` is no longer a fourth kind of
   // attribution, it is the absence of evidence.
   coverage: z.number().min(0).max(1), // (declared + inferred) / total
-  // Prior applied to commits with no evidence; null when none is configured.
-  // A prior joins a cohort but never raises coverage (#25).
+  // The repository's configured `defaultMode`, recorded for context; null
+  // when none is set. The hook stamps it on new commits; analysis never
+  // applies it to old ones, so it moves no number in this file.
   defaultMode: z.enum(['none', 'autocomplete', 'assisted', 'agent']).nullable(),
   coverageThreshold: z.number().min(0).max(1),
   belowThreshold: z.boolean(), // all-time; see `recent` for the actionable one
@@ -77,27 +78,9 @@ export const Attribution = z.object({
   }),
 });
 
-// Persistence = survival: days from first target-cohort touch of a file to
-// the first subsequent modification. Files never modified again are censored
-// at the observation end (they survived the window — the best outcome).
-// Migrations and generated files are excluded by default: their lifecycle is
-// convention-driven and carries no quality signal.
-// Rework rate (#22): share of AI-touched files modified again within a short
-// window. Right-censoring matters here: a file first touched two days ago
-// and not yet reworked has no *determined* outcome for a 7-day window, so it
-// counts in neither numerator nor denominator.
-export const Rework = z.object({
-  windowDays: z.number().int().positive(),
-  reworked: z.number().int().nonnegative(),
-  determined: z.number().int().nonnegative(), // files whose outcome is known
-  undetermined: z.number().int().nonnegative(), // observed for less than the window
-  rate: z.number().min(0).max(1),
-});
-
-// Fixed-horizon rapid retouch (# pre-1.0 metric contract). Unlike a raw
-// average of event times and censored follow-up, this answers one bounded
-// question: among files whose outcome by day N is known, how many were
-// touched again? Files that have not yet reached N are stated separately.
+// Fixed-horizon rapid retouch (the 1.0 metric contract): among files whose
+// outcome by day N is known, how many were touched again? Files that have
+// not yet reached N are stated separately, never folded into the rate.
 export const RapidRetouch = z.object({
   windowDays: z.number().int().positive(),
   retouched: z.number().int().nonnegative(),
@@ -106,35 +89,23 @@ export const RapidRetouch = z.object({
   rate: z.number().min(0).max(1).nullable(),
 });
 
+// Change signals for a set of authored commits: how often the files they
+// first touched were touched again. Migrations and generated files are
+// excluded by default: their lifecycle is convention-driven. The pre-1.0
+// follow-up summaries (average, median, buckets, censored count) and the
+// 7-day `rework` block were removed in schema v4: the averages mixed event
+// durations with censored follow-up, and `rework` was the 7-day rapid
+// retouch under a second name.
 export const Persistence = z.object({
   commitsConsidered: z.number().int().nonnegative(),
   filesConsidered: z.number().int().nonnegative(),
   filesExcluded: z.number().int().nonnegative(),
-  censored: z.number().int().nonnegative(), // files that survived the whole window
-  avgDays: z.number().nonnegative(),
-  medianDays: z.number().nonnegative(),
-  // Null when no file has a determined outcome in the window (#22)
-  rework: Rework.nullable(),
   rapidRetouch: z.array(RapidRetouch),
-  buckets: z.object({
-    d0_1: z.number().int().nonnegative(),
-    d2_7: z.number().int().nonnegative(),
-    d8_30: z.number().int().nonnegative(),
-    d31_90: z.number().int().nonnegative(),
-    d90_plus: z.number().int().nonnegative(),
-  }),
 });
 
-// Cohort age (#29): context for judging whether a persistence comparison
-// between cohorts is fair — older cohorts accumulate survival by default.
-export const AgeStats = z.object({
-  commits: z.number().int().nonnegative(),
-  avgAgeDays: z.number().nonnegative(),
-  medianAgeDays: z.number().nonnegative(),
-});
-
-// Task mix (#36): what kind of files each cohort touched. A persistence
-// comparison is only meaningful when the mixes are similar.
+// File categories decide which files the change signals exclude by default
+// (migrations, generated). Exported for consumers that categorise paths the
+// same way.
 export const FileCategory = z.enum([
   'source',
   'tests',
@@ -143,75 +114,6 @@ export const FileCategory = z.enum([
   'docs',
   'generated',
 ]);
-
-export const CategoryCounts = z.object({
-  source: z.number().int().nonnegative(),
-  tests: z.number().int().nonnegative(),
-  migrations: z.number().int().nonnegative(),
-  config: z.number().int().nonnegative(),
-  docs: z.number().int().nonnegative(),
-  generated: z.number().int().nonnegative(),
-});
-
-export const CohortContext = z.object({
-  age: AgeStats.nullable(),
-  taskMix: CategoryCounts.nullable(),
-});
-
-export const Baseline = z.object({
-  // True when the cohort includes no-evidence commits via defaultMode:
-  // the baseline is an assumption, not observed attribution.
-  assumed: z.boolean(),
-  persistence: Persistence,
-});
-
-export const Delta = z.object({
-  avgPersistenceDays: z.number(),
-  medianPersistenceDays: z.number(),
-  rapidRetouch30Rate: z.number().nullable(),
-});
-
-// Age-normalized comparison (#29): the AI vs Baseline table above can be
-// misleading when one cohort's commits are systematically older or younger
-// — an old cohort accumulates persistence simply from clock time, not code
-// quality. This recomputes both sides with each file's observation window
-// capped to `capDays` (the younger cohort's average commit age), so neither
-// side gets credit for time it hasn't actually had. Null when there's no
-// baseline cohort to compare against, same condition as `baseline`.
-export const FairComparison = z.object({
-  capDays: z.number().nonnegative(),
-  ai: Persistence,
-  baseline: Persistence,
-  delta: Delta,
-});
-
-// Within-category comparison (#36 step 2): persistence computed separately
-// per file category instead of pooled, so a mismatched task mix between
-// cohorts (e.g. AI writes mostly tests, humans write mostly source) can't
-// masquerade as a quality difference. Each side is null when that cohort has
-// no files in the category; delta only when both sides are present.
-export const CategoryPersistence = z.object({
-  filesConsidered: z.number().int().nonnegative(),
-  avgDays: z.number().nonnegative(),
-  medianDays: z.number().nonnegative(),
-  rapidRetouch30: RapidRetouch.nullable(),
-});
-
-export const CategoryComparison = z.object({
-  ai: CategoryPersistence.nullable(),
-  baseline: CategoryPersistence.nullable(),
-  deltaAvgDays: z.number().nullable(),
-  deltaMedianDays: z.number().nullable(),
-});
-
-export const ByCategory = z.object({
-  source: CategoryComparison,
-  tests: CategoryComparison,
-  migrations: CategoryComparison,
-  config: CategoryComparison,
-  docs: CategoryComparison,
-  generated: CategoryComparison,
-});
 
 // Outcome correlation (#26), scoped to what git itself can answer: reverts
 // and hotfix-pattern commits, linked back to the attribution/mode of the
@@ -273,29 +175,6 @@ export const HotfixStats = z.object({
 export const OutcomeCorrelation = z.object({
   reverts: RevertStats,
   hotfixes: HotfixStats,
-});
-
-// Per-autonomy-level metrics (#25, step 2): the durable comparison in an
-// AI-first world is between autonomy levels, not AI vs human. Automated
-// commits are excluded — automation is not authored code. Null when the
-// mode has no commits.
-export const ModeStats = z.object({
-  commits: z.number().int().nonnegative(),
-  // How many of `commits` are here only because of the `defaultMode` prior
-  // (#25). Without this the per-level table and the observed-counts table
-  // report different numbers for the same cohort with nothing to explain
-  // the gap — found running evidtrail against varano-239, where the header said
-  // `agent 5` and this table said `agent 16`.
-  assumed: z.number().int().nonnegative(),
-  persistence: Persistence,
-});
-
-export const ByMode = z.object({
-  agent: ModeStats.nullable(),
-  assisted: ModeStats.nullable(),
-  autocomplete: ModeStats.nullable(),
-  none: ModeStats.nullable(),
-  unknown: ModeStats.nullable(),
 });
 
 // PR acceptance (#51): merged vs closed-unmerged, per cohort. Null when no
@@ -360,22 +239,20 @@ export const LineSurvival = z.object({
   approxSurvivalRate: z.number().min(0).max(1),
 });
 
-// Repo-level quality (#77, step 1): the quality of the codebase as a
-// property of the REPO, not of a cohort. Everything here is computable at
-// 0% evidence coverage and is untouched by the `defaultMode` prior — the
-// primary object in a world where cohorts are empty by default, with the
-// cohort views below as optional overlays.
+// Repository change signals (#77, step 1): a property of the REPO, not of a
+// cohort. Computable at 0% evidence coverage, and nothing in it depends on
+// attribution.
 export const RepoQuality = z.object({
   // Authored commits: everything except automation (merge commits, release
   // bots). Automation is not authored code, whoever ran it.
   commitsAuthored: z.number().int().nonnegative(),
   commitsAutomated: z.number().int().nonnegative(),
-  // Persistence and rework over ALL authored commits, cohort-free
+  // Rapid retouch over ALL authored commits, cohort-free
   persistence: Persistence,
 });
 
-// Quality over time (#77, step 3): the comparator that replaces cohorts
-// once "AI vs human" has no second side left. Derived from the commit stream
+// Change signals over time (#77, step 3): the repo compared with its own
+// past, the only comparison left once "AI vs human" has no second side. Derived from the commit stream
 // in one run, so a trend exists on first use rather than after months of
 // archived runs.
 export const TrendGranularity = z.enum(['month', 'quarter']);
@@ -396,7 +273,7 @@ export const TrendPeriod = z.object({
   persistence: Persistence.nullable(),
   // False until the period has been over for `observationDays`: its files
   // have not all had the full window yet, so it is reported but never
-  // compared. Without this every report would find quality "declining".
+  // compared. Without this every report would find retouch "rising".
   mature: z.boolean(),
 });
 
@@ -433,8 +310,6 @@ export const Trend = z.object({
     .object({
       from: z.string(),
       to: z.string(),
-      avgPersistenceDays: TrendDelta,
-      reworkRate: TrendDelta.nullable(),
       rapidRetouchRate: TrendDelta.nullable(),
       // Additive (#102): absent in artifacts written before it existed
       comparability: TrendComparability.optional(),
@@ -459,24 +334,10 @@ export const Metrics = z.object({
   scope: z.enum(['default-branch', 'all-refs', 'pr']),
   headSha: z.string(),
   attribution: Attribution,
-  // Repo-level quality (#77): cohort-free, prior-free, the primary object
+  // Repository change signals (#77): cohort-free and attribution-free
   repo: RepoQuality,
-  // The same quality, over time (#77 step 3)
+  // The same signals, over time (#77 step 3)
   trend: Trend,
-  persistence: Persistence,
-  // Fairness context (#29, #36): age and task mix per cohort, so consumers
-  // can judge whether the AI-vs-baseline comparison is apples-to-apples.
-  cohorts: z.object({
-    ai: CohortContext,
-    baseline: CohortContext,
-  }),
-  byMode: ByMode,
-  // Age-normalized AI vs Baseline (#29). Same nullability as `baseline`.
-  fairComparison: FairComparison.nullable(),
-  // Per-file-category AI vs Baseline (#36 step 2). Always present; each
-  // category's sides are independently null when that cohort touched no
-  // files of that kind.
-  byCategory: ByCategory,
   // Reverts and hotfixes linked to the commit(s) they respond to (#26).
   // Always present — a property of the repo, not a cohort comparison.
   outcomeCorrelation: OutcomeCorrelation,
@@ -484,30 +345,16 @@ export const Metrics = z.object({
   prAcceptance: PRAcceptance.nullable(),
   // Null unless `evidtrail blame` produced a blame-stream.json (#23)
   lineSurvival: LineSurvival.nullable(),
-  // Null when no commit sits at autonomy level 'none' and no defaultMode prior
-  // assigns the unknowns: evidtrail does not invent a comparison cohort.
-  baseline: Baseline.nullable(),
-  delta: Delta.nullable(),
   caveats: z.array(z.string()),
 });
 
 export type Attribution = z.infer<typeof Attribution>;
 export type RecentCoverage = z.infer<typeof RecentCoverage>;
 export type EvidenceGap = z.infer<typeof EvidenceGap>;
-export type Rework = z.infer<typeof Rework>;
 export type RapidRetouch = z.infer<typeof RapidRetouch>;
-export type AgeStats = z.infer<typeof AgeStats>;
 export type FileCategory = z.infer<typeof FileCategory>;
-export type CategoryCounts = z.infer<typeof CategoryCounts>;
-export type CohortContext = z.infer<typeof CohortContext>;
-export type ModeStats = z.infer<typeof ModeStats>;
-export type ByMode = z.infer<typeof ByMode>;
 export type AcceptanceStats = z.infer<typeof AcceptanceStats>;
 export type PRAcceptance = z.infer<typeof PRAcceptance>;
-export type FairComparison = z.infer<typeof FairComparison>;
-export type CategoryPersistence = z.infer<typeof CategoryPersistence>;
-export type CategoryComparison = z.infer<typeof CategoryComparison>;
-export type ByCategory = z.infer<typeof ByCategory>;
 export type OutcomeRate = z.infer<typeof OutcomeRate>;
 export type RevertStats = z.infer<typeof RevertStats>;
 export type HotfixStats = z.infer<typeof HotfixStats>;
@@ -515,8 +362,6 @@ export type OutcomeCorrelation = z.infer<typeof OutcomeCorrelation>;
 export type LineSurvival = z.infer<typeof LineSurvival>;
 export type Persistence = z.infer<typeof Persistence>;
 export type RepoQuality = z.infer<typeof RepoQuality>;
-export type Baseline = z.infer<typeof Baseline>;
-export type Delta = z.infer<typeof Delta>;
 export type TrendGranularity = z.infer<typeof TrendGranularity>;
 export type TrendPeriod = z.infer<typeof TrendPeriod>;
 export type TrendComparability = z.infer<typeof TrendComparability>;

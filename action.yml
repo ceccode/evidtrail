@@ -39,7 +39,7 @@ inputs:
   cli-version:
     description: "@evidtrail/cli version range to run."
     required: false
-    default: '1'
+    default: '2'
 
 outputs:
   report:

@@ -1,5 +1,5 @@
 # Runs the composite action exactly as a consumer would (`uses: ./` is the
-# in-repo form of `uses: ceccode/evidtrail@v1`). Every other workflow here
+# in-repo form of `uses: ceccode/evidtrail@v2`). Every other workflow here
 # calls the built binary directly, so until this existed the action itself —
 # preflight, npx-pinned CLI, scope detection, outputs — had never been
 # executed by CI. A launch that points people at `uses:` needs this green.
@@ -31,6 +31,11 @@ jobs:
         with:
           comment: false
           out-dir: ./.smoke
+          # A range, not the action's default: a pull request that bumps the
+          # major runs before that major is on npm. The range resolves to the
+          # newest published CLI it allows, so this stays green across the
+          # release and tests the new major as soon as it exists.
+          cli-version: '>=1.3 <3'
 
       - name: The action produced what it promises
         env:

@@ -15,8 +15,9 @@ export const LEGACY_HOOK_END_MARKER = '# <<< aida-metrics mode stamp <<<';
 // would be a fabricated declaration.
 export const HOOK_SCRIPT = `#!/bin/sh
 ${HOOK_MARKER}
-# Stamps 'AI-Mode: <mode>', and 'Assisted-by: <tool>' when AI took part and
-# the tool is known, so commit provenance is declared, not inferred.
+# Stamps 'AI-Mode: <mode>', 'Assisted-by: <tool>' when AI took part and the
+# tool is known, and 'AI-Session: <agent>/<id>' when the person opted in, so
+# commit provenance is declared, not inferred.
 # Docs: https://github.com/ceccode/evidtrail/issues/61
 # Remove with: evidtrail install-hooks --uninstall
 
@@ -42,8 +43,7 @@ evidtrail_stamp_mode() {
     detected_agent="Cursor"
   fi
 
-  # AIDA_MODE is the pre-rename name, honoured for one release.
-  mode="\${EVIDTRAIL_MODE:-$AIDA_MODE}"
+  mode="$EVIDTRAIL_MODE"
   [ -n "$mode" ] || mode="$detected_mode"
 
   # EVIDTRAIL_AGENT names a tool the hook cannot detect (Codex documents no
@@ -51,14 +51,8 @@ evidtrail_stamp_mode() {
   agent=$(printf '%s' "\${EVIDTRAIL_AGENT:-$detected_agent}" | tr -d '\\r\\n')
 
   # Repo-wide default, opt-in via .evidtrail.json { "defaultMode": "..." }.
-  # .aida.json is the pre-rename file name, read for one release.
-  if [ -z "$mode" ]; then
-    for cfg in .evidtrail.json .aida.json; do
-      if [ -f "$cfg" ]; then
-        mode=$(sed -n 's/.*"defaultMode"[[:space:]]*:[[:space:]]*"\\([a-z]*\\)".*/\\1/p' "$cfg" | head -n 1)
-        break
-      fi
-    done
+  if [ -z "$mode" ] && [ -f .evidtrail.json ]; then
+    mode=$(sed -n 's/.*"defaultMode"[[:space:]]*:[[:space:]]*"\\([a-z]*\\)".*/\\1/p' .evidtrail.json | head -n 1)
   fi
 
   has_assisted_by=""

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execFileSync, execSync, spawnSync } from 'child_process';
-import { existsSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 
@@ -70,22 +70,15 @@ describe('binary dispatch (index.ts)', () => {
     }
   });
 
-  it('invoked as `aida` still works, with a one-line rename notice on stderr', () => {
-    // The bin alias survives one release so existing `prepare` scripts and CI
-    // steps keep working; the notice must not pollute stdout, which CI pipes.
-    const dir = mkdtempSync(join(tmpdir(), 'evidtrail-alias-'));
-    try {
-      const alias = join(dir, 'aida');
-      symlinkSync(BIN, alias);
-      const result = spawnSync('node', [alias, '--help'], { encoding: 'utf8' });
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain('evidtrail');
-      expect(result.stderr).toContain('renamed to evidtrail');
-      // ...and the canonical name is silent
-      expect(spawnSync('node', [BIN, '--help'], { encoding: 'utf8' }).stderr).toBe('');
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+  it('ships one bin, so npx never runs a deprecated alias', () => {
+    // 1.x shipped `aida` next to `evidtrail`, and `npx @evidtrail/cli` picked
+    // the alias: every GitHub Action run printed a rename notice to its log.
+    // One bin removes the choice.
+    const pkg = JSON.parse(readFileSync(join(BIN, '..', '..', 'package.json'), 'utf8')) as {
+      bin: Record<string, string>;
+    };
+    expect(Object.keys(pkg.bin)).toEqual(['evidtrail']);
+    expect(spawnSync('node', [BIN, '--help'], { encoding: 'utf8' }).stderr).toBe('');
   });
 
   it('every subcommand is still reachable and --help lists them', () => {

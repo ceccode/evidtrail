@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Commit, CommitStream } from '@evidtrail/core';
 import { calculateTrend } from './trend.js';
+import { calculatePersistence } from './persistence.js';
 
 const NOW = new Date('2026-07-15T00:00:00.000Z');
 
@@ -118,7 +119,7 @@ describe('calculateTrend', () => {
     // January: files reworked fast (1 day)
     commits.push(makeCommit('j1', '2026-01-05T00:00:00Z', ['src/jan.ts']));
     commits.push(makeCommit('j2', '2026-01-06T00:00:00Z', ['src/jan.ts']));
-    // February: files never touched again -> survive the full window
+    // February: files never touched again within the window
     commits.push(makeCommit('f1', '2026-02-05T00:00:00Z', ['src/feb.ts']));
 
     const trend = calculateTrend(makeStream(commits), {
@@ -129,13 +130,13 @@ describe('calculateTrend', () => {
     expect(trend.latestComparison).not.toBeNull();
     expect(trend.latestComparison!.from).toBe('2026-01');
     expect(trend.latestComparison!.to).toBe('2026-02');
-    // February's file survived the whole capped window, January's lasted a day
-    expect(trend.latestComparison!.avgPersistenceDays.delta).toBeGreaterThan(0);
+    // January's file was retouched the next day, February's never
+    expect(trend.latestComparison!.rapidRetouchRate).toEqual({ from: 1, to: 0, delta: -1 });
   });
 
-  // Age-normalization (#29) applied to time instead of cohorts: an old period
-  // must not win simply for having existed longer.
-  it('caps every period to the same observation window', () => {
+  // An old period must not win simply for having existed longer: each is
+  // judged on the same fixed horizon, whatever its age.
+  it('judges every period on the same horizon, not on its age', () => {
     const trend = calculateTrend(
       makeStream([
         makeCommit('old', '2026-01-05T00:00:00Z', ['src/old.ts']),
@@ -146,10 +147,12 @@ describe('calculateTrend', () => {
 
     const jan = trend.periods.find((p) => p.label === '2026-01')!.persistence!;
     const may = trend.periods.find((p) => p.label === '2026-05')!.persistence!;
-    // Neither file was ever touched again: both are censored at exactly the
-    // window, not at their real age (191 days vs 71)
-    expect(jan.avgDays).toBe(30);
-    expect(may.avgDays).toBe(30);
+    // Neither file was ever touched again. At 191 and 71 days old, both are
+    // judged on the same 30-day question and give the same answer.
+    expect(jan.rapidRetouch).toEqual(may.rapidRetouch);
+    expect(jan.rapidRetouch).toEqual([
+      { windowDays: 30, retouched: 0, eligible: 1, tooRecent: 0, rate: 0 },
+    ]);
   });
 
   it('reports both denominators: coverage over all commits, quality over authored', () => {
@@ -198,6 +201,31 @@ describe('calculateTrend', () => {
 
     expect(trend.periods).toEqual([]);
     expect(trend.latestComparison).toBeNull();
+  });
+});
+
+// Found comparing 1.3.1 with 2.0 on llama.cpp: the trend capped observation
+// at exactly 30×24 hours after a file's first touch, while the repository
+// table counts whole days. A file touched again 30.5 days later was
+// "retouched within 30d" in one table and "not retouched" in the other —
+// the same files, two definitions, one report. Both now use the
+// repository's whole-day horizon.
+describe('the trend and the repository table agree on the horizon', () => {
+  it('counts a retouch on day 30 the same way in both', () => {
+    const stream = makeStream([
+      makeCommit('first', '2026-01-05T00:00:00Z', ['src/edge.ts']),
+      makeCommit('again', '2026-02-04T12:00:00Z', ['src/edge.ts']), // 30.5 days later
+    ]);
+
+    const trend = calculateTrend(stream, { observationEnd: NOW, observationDays: 30 });
+    const january = trend.periods.find((p) => p.label === '2026-01')!.persistence!;
+    const repo = calculatePersistence(stream, (commit) => !commit.tags.automated, {
+      observationEnd: NOW,
+      retouchHorizons: [30],
+    });
+
+    expect(january.rapidRetouch[0]).toMatchObject({ retouched: 1, eligible: 1 });
+    expect(january.rapidRetouch[0].retouched).toBe(repo.rapidRetouch[0].retouched);
   });
 });
 

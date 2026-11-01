@@ -47,7 +47,7 @@ export function createCollectCommand(): Command {
 
       try {
         // Load .evidtrail.json config (merge with CLI flags)
-        const fileConfig = await loadConfig(config.repo, logger);
+        const fileConfig = await loadConfig(config.repo);
         const aiPatterns = [...(fileConfig.patterns || []), ...config.aiPatterns];
         const aiTools = [...(fileConfig.tools || []), ...config.aiTools];
         const aiTrailerDomains = [...(fileConfig.trailerDomains || []), ...config.aiTrailerDomains];

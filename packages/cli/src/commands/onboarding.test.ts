@@ -138,14 +138,13 @@ describe('evidtrail doctor', () => {
     expect(config.detail).toContain('defaultMode');
   });
 
-  it('reads a pre-rename .aida.json and asks for the rename, without failing', async () => {
+  it('fails on a retired .aida.json and names the rename, since 2.0 no longer reads it', async () => {
     writeFileSync(join(repoPath, '.aida.json'), '{"defaultMode":"agent"}\n');
     const checks = await runDoctor(repoPath);
     const config = checks.find((c) => c.name === '.evidtrail.json')!;
-    expect(config.status).toBe('warn');
-    expect(config.detail).toContain('defaultMode: agent');
+    expect(config.status).toBe('fail');
     expect(config.detail).toContain('.aida.json');
-    expect(config.fix).toContain('git mv .aida.json .evidtrail.json');
+    expect(config.fix).toBe('git mv .aida.json .evidtrail.json');
 
     // init sees the same file as "already configured": no second config
     const steps = await runInit({ repoPath, workflow: false, prepare: false });

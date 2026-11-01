@@ -6,7 +6,7 @@ import { installHook, uninstallHook } from '../hooks/install.js';
 export function createInstallHooksCommand(): Command {
   return new Command('install-hooks')
     .description(
-      'Install a prepare-commit-msg hook that stamps the autonomy mode (AI-Mode trailer)'
+      'Install a prepare-commit-msg hook that stamps AI-Mode, Assisted-by and (opt-in) AI-Session trailers'
     )
     .option('--repo <path>', 'Repository path', process.cwd())
     .option('--force', 'Overwrite an existing unrelated hook', false)

@@ -239,23 +239,14 @@ describe('the installed hook, running for real', () => {
     expect(message).toContain('AI-Mode: assisted');
   });
 
-  it('honours the pre-rename AIDA_MODE when EVIDTRAIL_MODE is unset', () => {
-    git('git commit -q --allow-empty -m "feat: old env"', { AIDA_MODE: 'assisted' });
-    const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
-    expect(message).toContain('AI-Mode: assisted');
-  });
-
-  it('lets EVIDTRAIL_MODE win over AIDA_MODE when both are set', () => {
-    git('git commit -q --allow-empty -m "feat: both env"', { EVIDTRAIL_MODE: 'agent', AIDA_MODE: 'none' });
-    const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
-    expect(message).toContain('AI-Mode: agent');
-  });
-
-  it('reads defaultMode from the pre-rename .aida.json when nothing else determines it', () => {
+  // The pre-rename names were honoured until 2.0. A stale variable or file
+  // must not keep stamping a mode after that: a declaration nobody chose
+  // again is worse than none, because `declared` is the strongest evidence.
+  it('ignores the retired AIDA_MODE and .aida.json', () => {
     writeFileSync(join(repoPath, '.aida.json'), JSON.stringify({ defaultMode: 'autocomplete' }));
-    git('git add -A && git commit -q -m "chore: old config"');
+    git('git add -A && git commit -q -m "chore: old config"', { AIDA_MODE: 'assisted' });
     const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
-    expect(message).toContain('AI-Mode: autocomplete');
+    expect(message).not.toContain('AI-Mode:');
   });
 
   it('reads defaultMode from .evidtrail.json when nothing else determines it', () => {
@@ -479,6 +470,6 @@ describe('low-coverage warning names a missing hook in a configured repo', () =>
 
     expect(warnings).toContain('Coverage is below');
     expect(warnings).not.toContain('THIS CLONE');
-    expect(warnings).toContain('A defaultMode prior does not increase coverage');
+    expect(warnings).toContain('defaultMode does not apply to past commits');
   });
 });

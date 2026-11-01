@@ -119,23 +119,6 @@ describe('GitLabProvider.postComment', () => {
     expect(calls[1].url).toContain('/notes/99');
   });
 
-  it('replaces a note posted under the pre-rename marker, and re-marks it with the new one', async () => {
-    // A merge request open across the upgrade must not end up with two
-    // reports: the old marker is still found, the body is rewritten with
-    // the current marker so the next run finds it under the new name.
-    process.env.GITLAB_TOKEN = 'glpat-secret';
-    const calls = mockFetch([
-      () => json([{ id: 7, body: '<!-- aida-metrics-report -->\nold report' }]),
-      () => json({ id: 7 }),
-    ]);
-
-    await new GitLabProvider().postComment('# evidtrail Report');
-
-    expect(calls[1].init?.method).toBe('PUT');
-    expect(calls[1].url).toContain('/notes/7');
-    expect(String(calls[1].init?.body)).toContain('<!-- evidtrail-report -->');
-  });
-
   it('authenticates with PRIVATE-TOKEN', async () => {
     process.env.GITLAB_TOKEN = 'glpat-secret';
     const calls = mockFetch([() => json([]), () => json({ id: 1 }, 201)]);
