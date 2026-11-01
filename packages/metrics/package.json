@@ -1,6 +1,6 @@
 {
   "name": "@evidtrail/metrics",
-  "version": "1.2.1",
+  "version": "2.0.0",
   "description": "Deterministic provenance coverage and change signals (rapid retouch, trend, cohorts, outcomes) for evidtrail. AI provenance for git: declared at commit time, checked in CI, traceable to the agent session. Honest about what git cannot prove.",
   "type": "module",
   "main": "dist/index.js",
