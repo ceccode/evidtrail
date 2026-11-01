@@ -445,3 +445,55 @@ describe('codex as a default tool name', () => {
     expect(result.mode).toBe('unknown');
   });
 });
+
+// `Assisted-by:` is the disclosure trailer the Linux kernel, Fedora and LLVM
+// ask for. Before this, a commit carrying it came out as `evidence: none`
+// unless it also happened to name a tool in a sentence — a person had stated
+// that AI took part, and the report counted the commit as having no signal.
+describe('Assisted-by trailer', () => {
+  const tagger = createAITagger();
+
+  it('is a declaration of involvement', () => {
+    const result = tagger('mm: fix leak\n\nAssisted-by: SomeAgent');
+    expect(result.evidence).toBe('declared');
+    expect(result.attribution).toBe('ai');
+    expect(result.sources).toContain('trailer:Assisted-by');
+  });
+
+  it('does not invent an autonomy level from a model name', () => {
+    // The kernel format names a model. A model says which AI, not how much
+    // of the work it did: reading `agent` here would put a reviewed patch
+    // in the same cohort as an autonomous one.
+    const result = tagger('mm: fix leak\n\nAssisted-by: Claude:claude-3-opus coccinelle sparse');
+    expect(result.mode).toBe('unknown');
+    expect(result.evidence).toBe('declared');
+  });
+
+  it('takes the level from AI-Mode when both are present', () => {
+    const result = tagger('feat: x\n\nAI-Mode: agent\nAssisted-by: Claude Code');
+    expect(result.mode).toBe('agent');
+    expect(result.evidence).toBe('declared');
+    expect(result.sources).toEqual(expect.arrayContaining(['trailer:AI-Mode', 'trailer:Assisted-by']));
+  });
+
+  it('beats an AI-Mode: none stamp written by a repo-wide prior', () => {
+    // A repo with `defaultMode: none` stamps every commit `none`. A
+    // contributor who adds Assisted-by by hand has stated the opposite, and
+    // the person outranks the prior: this must not count as hand-written.
+    const result = tagger('fix: y\n\nAssisted-by: Cursor\nAI-Mode: none');
+    expect(result.attribution).toBe('ai');
+    expect(result.mode).toBe('unknown');
+    expect(result.evidence).toBe('declared');
+  });
+
+  it('ignores a template left at none', () => {
+    const result = tagger('fix: y\n\nAssisted-by: none');
+    expect(result.evidence).toBe('none');
+    expect(result.attribution).toBe('unknown');
+  });
+
+  it('only counts as a trailer at the start of a line', () => {
+    const result = tagger('docs: explain the Assisted-by: trailer in CONTRIBUTING');
+    expect(result.sources).not.toContain('trailer:Assisted-by');
+  });
+});

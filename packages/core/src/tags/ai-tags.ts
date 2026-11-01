@@ -6,7 +6,7 @@ export type AILevel = 'explicit' | 'implicit' | 'mention' | 'none';
 export type AIMode = 'none' | 'autocomplete' | 'assisted' | 'agent' | 'unknown';
 
 // PRIMARY AXIS 2 — evidence (#25): how we know. 'declared' = someone stated
-// it (AI-Mode trailer, manifest); 'inferred' = we concluded it from tool
+// it (AI-Mode or Assisted-by trailer, manifest); 'inferred' = we concluded it from tool
 // identity or commit structure — real signal, our conclusion; 'none' = no
 // signal at all, which is what the old `attribution: 'unknown'` meant.
 //
@@ -62,6 +62,23 @@ const DECLARED_MODE_TRAILER = /^AI-Mode:\s*(none|autocomplete|assisted|agent)\s*
 export function declaredMode(message: string): AIMode | null {
   const match = message.match(DECLARED_MODE_TRAILER);
   return match ? (match[1].toLowerCase() as AIMode) : null;
+}
+
+// `Assisted-by: <agent>[:<model>] [tools]` is the disclosure trailer the
+// Linux kernel, Fedora and LLVM ask contributors to write. A person wrote it
+// to say AI took part, so it is declared evidence of involvement. It says
+// nothing about how much: the kernel's own example names a model, and a
+// model is not an autonomy level. The mode stays unknown unless an AI-Mode
+// trailer states it.
+const ASSISTED_BY_TRAILER = /^Assisted-by:[ \t]*(\S[^\r\n]*)$/im;
+// "Assisted-by: none" is someone filling in a template, not a disclosure.
+const NO_ASSISTANCE = /^(none|no|n\/a|-)$/i;
+
+export function assistedBy(message: string): string | null {
+  const match = message.match(ASSISTED_BY_TRAILER);
+  if (!match) return null;
+  const value = match[1].trim();
+  return NO_ASSISTANCE.test(value) ? null : value;
 }
 
 export function inferMode(message: string): AIMode {
@@ -295,6 +312,21 @@ export function createAITagger(
     // 1. Declared. `AI-Mode: agent` states an agent wrote this; `AI-Mode:
     //    none` states a human did (#61). A declaration outranks everything.
     const declared = declaredMode(message);
+    const assisted = assistedBy(message);
+    if (assisted) sources.push('trailer:Assisted-by');
+
+    // A written disclosure outranks a `none` stamp. The realistic way to get
+    // both is a repo whose `defaultMode` is `none` and a contributor who
+    // added Assisted-by by hand: the hook stamped the prior, the person
+    // stated the fact. Reading `none` there would file a disclosed AI commit
+    // as hand-written.
+    if (assisted && (!declared || declared === 'none')) {
+      return tagFromAxes({ mode: 'unknown', evidence: 'declared', automated: false }, 'explicit', [
+        ...sources,
+        ...(declared ? ['trailer:AI-Mode'] : []),
+      ]);
+    }
+
     if (declared) {
       sources.push('trailer:AI-Mode');
       return tagFromAxes(

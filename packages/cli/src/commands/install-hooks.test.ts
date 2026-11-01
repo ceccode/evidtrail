@@ -15,7 +15,14 @@ let repoPath: string;
 // The suite may itself run inside an agent environment (it did during
 // development: the hook correctly detected Claude Code and stamped every
 // commit). Tests must therefore control detection inputs explicitly.
-const DETECTION_VARS = ['EVIDTRAIL_MODE', 'AIDA_MODE', 'CLAUDECODE', 'CLAUDE_CODE_ENTRYPOINT', 'CURSOR_TRACE_ID'];
+const DETECTION_VARS = [
+  'EVIDTRAIL_MODE',
+  'AIDA_MODE',
+  'EVIDTRAIL_AGENT',
+  'CLAUDECODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CURSOR_TRACE_ID',
+];
 
 function git(cmd: string, env: Record<string, string> = {}) {
   const clean = { ...process.env };
@@ -253,6 +260,76 @@ describe('the installed hook, running for real', () => {
     git('git add -A && git commit -q -m "chore: config"');
     const message = execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
     expect(message).toContain('AI-Mode: assisted');
+  });
+
+  // Assisted-by is what the kernel, Fedora and LLVM ask for. The hook writes
+  // it only when AI took part AND the tool is known: a tool name the hook
+  // guessed would be a fabricated disclosure, which is worse than none.
+  describe('Assisted-by', () => {
+    function lastMessage(): string {
+      return execSync('git log -1 --format=%B', { cwd: repoPath }).toString();
+    }
+
+    it('names the detected tool next to the mode', async () => {
+      git('git commit -q --allow-empty -m "feat: agent work"', { CLAUDECODE: '1' });
+      expect(lastMessage()).toContain('AI-Mode: agent\nAssisted-by: Claude Code');
+
+      const outDir = mkdtempSync(join(tmpdir(), 'evidtrail-hooks-out-'));
+      try {
+        await run(createCollectCommand(), ['--repo', repoPath, '--out-dir', outDir]);
+        const stream = JSON.parse(readFileSync(join(outDir, 'commit-stream.json'), 'utf-8'));
+        expect(stream.commits[0].tags.mode).toBe('agent');
+        expect(stream.commits[0].tags.evidence).toBe('declared');
+      } finally {
+        rmSync(outDir, { recursive: true, force: true });
+      }
+    });
+
+    it('keeps naming the tool when EVIDTRAIL_MODE sets the level', () => {
+      git('git commit -q --allow-empty -m "feat: reviewed"', { CLAUDECODE: '1', EVIDTRAIL_MODE: 'assisted' });
+      expect(lastMessage()).toContain('AI-Mode: assisted\nAssisted-by: Claude Code');
+    });
+
+    it('writes no tool name when none is known', () => {
+      git('git commit -q --allow-empty -m "feat: some agent"', { EVIDTRAIL_MODE: 'agent' });
+      expect(lastMessage()).toContain('AI-Mode: agent');
+      expect(lastMessage()).not.toContain('Assisted-by');
+    });
+
+    it('takes the tool from EVIDTRAIL_AGENT for tools it cannot detect', () => {
+      git('git commit -q --allow-empty -m "feat: codex"', { EVIDTRAIL_MODE: 'agent', EVIDTRAIL_AGENT: 'Codex' });
+      expect(lastMessage()).toContain('Assisted-by: Codex');
+    });
+
+    it('writes no disclosure when the mode says no AI took part', () => {
+      git('git commit -q --allow-empty -m "fix: by hand"', { CLAUDECODE: '1', EVIDTRAIL_MODE: 'none' });
+      expect(lastMessage()).toContain('AI-Mode: none');
+      expect(lastMessage()).not.toContain('Assisted-by');
+    });
+
+    it('does not stamp a none prior over a hand-written disclosure', async () => {
+      writeFileSync(join(repoPath, '.evidtrail.json'), JSON.stringify({ defaultMode: 'none' }));
+      git('git add -A && git commit -q -m "fix: y" -m "Assisted-by: Cursor"');
+      expect(lastMessage()).not.toContain('AI-Mode');
+
+      const outDir = mkdtempSync(join(tmpdir(), 'evidtrail-hooks-out-'));
+      try {
+        await run(createCollectCommand(), ['--repo', repoPath, '--out-dir', outDir]);
+        const stream = JSON.parse(readFileSync(join(outDir, 'commit-stream.json'), 'utf-8'));
+        expect(stream.commits[0].tags.attribution).toBe('ai');
+        expect(stream.commits[0].tags.evidence).toBe('declared');
+      } finally {
+        rmSync(outDir, { recursive: true, force: true });
+      }
+    });
+
+    it('does not add a second Assisted-by line', () => {
+      git('git commit -q --allow-empty -m "feat: z" -m "Assisted-by: Claude Code:claude-opus-5-5"', {
+        CLAUDECODE: '1',
+      });
+      expect(lastMessage().match(/Assisted-by:/g)).toHaveLength(1);
+      expect(lastMessage()).toContain('AI-Mode: agent');
+    });
   });
 
   it('never blocks a commit, even if the hook body fails', () => {
