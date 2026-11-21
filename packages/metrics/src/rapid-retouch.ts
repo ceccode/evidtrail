@@ -1,20 +1,20 @@
 import { Commit, CommitStream } from '@evidtrail/core';
 import { categorizeFile } from './file-category.js';
 import { observationEndOf } from './observation.js';
-import { FileCategory, Persistence } from './schema/metrics.js';
+import { FileCategory, RetouchSummary } from './schema/metrics.js';
 
 // Categories whose lifecycle is governed by convention, not code quality:
 // migrations are append-only (never modified once applied), generated files
 // (lockfiles, changelogs) churn on every release regardless of author.
 // Either way a retouch carries no signal, so they are excluded by default.
-export const DEFAULT_PERSISTENCE_EXCLUDED_CATEGORIES: FileCategory[] = [
+export const DEFAULT_RETOUCH_EXCLUDED_CATEGORIES: FileCategory[] = [
   'migrations',
   'generated',
 ];
 
 export const DEFAULT_RAPID_RETOUCH_HORIZONS = [7, 30, 90] as const;
 
-export interface PersistenceOptions {
+export interface RapidRetouchOptions {
   excludeCategories?: FileCategory[];
   // End of the observation window. Defaults to the stream's collection time,
   // or to its `--until` bound when that is earlier — see `observationEndOf`.
@@ -27,7 +27,7 @@ export interface PersistenceOptions {
 interface FileLifecycle {
   firstTargetIndex: number;
   firstTargetDate: Date;
-  // Set when a later commit modifies or deletes the file: survival ends
+  // Set when a later commit modifies or deletes the file: the retouch
   eventDate: Date | null;
 }
 
@@ -41,13 +41,13 @@ function elapsedDays(from: Date, to: Date): number {
 // FIRST subsequent modification (or deletion) by any commit. For each fixed
 // horizon N, the file is retouched (event within N days), eligible (event
 // within N, or observed event-free for N days), or too recent.
-export function calculatePersistence(
+export function calculateRapidRetouch(
   commitStream: CommitStream,
   isTarget: (commit: Commit) => boolean = (commit) => !commit.tags.automated,
-  options: PersistenceOptions = {}
-): Persistence {
+  options: RapidRetouchOptions = {}
+): RetouchSummary {
   const {
-    excludeCategories = DEFAULT_PERSISTENCE_EXCLUDED_CATEGORIES,
+    excludeCategories = DEFAULT_RETOUCH_EXCLUDED_CATEGORIES,
     observationEnd = observationEndOf(commitStream),
     retouchHorizons = [...DEFAULT_RAPID_RETOUCH_HORIZONS],
   } = options;
@@ -55,7 +55,7 @@ export function calculatePersistence(
 
   const targetCommits = commitStream.commits.filter(isTarget);
 
-  const empty: Persistence = {
+  const empty: RetouchSummary = {
     commitsConsidered: targetCommits.length,
     filesConsidered: 0,
     filesExcluded: 0,
@@ -172,3 +172,11 @@ export function calculatePersistence(
     })),
   };
 }
+
+// Names from before 2.1, kept so importers of @evidtrail/metrics keep compiling.
+/** @deprecated Renamed to {@link calculateRapidRetouch}. */
+export const calculatePersistence = calculateRapidRetouch;
+/** @deprecated Renamed to {@link RapidRetouchOptions}. */
+export type PersistenceOptions = RapidRetouchOptions;
+/** @deprecated Renamed to {@link DEFAULT_RETOUCH_EXCLUDED_CATEGORIES}. */
+export const DEFAULT_PERSISTENCE_EXCLUDED_CATEGORIES = DEFAULT_RETOUCH_EXCLUDED_CATEGORIES;

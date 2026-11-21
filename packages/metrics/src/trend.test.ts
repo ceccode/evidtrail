@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Commit, CommitStream } from '@evidtrail/core';
 import { calculateTrend } from './trend.js';
-import { calculatePersistence } from './persistence.js';
+import { calculateRapidRetouch } from './rapid-retouch.js';
 
 const NOW = new Date('2026-07-15T00:00:00.000Z');
 
@@ -219,7 +219,7 @@ describe('the trend and the repository table agree on the horizon', () => {
 
     const trend = calculateTrend(stream, { observationEnd: NOW, observationDays: 30 });
     const january = trend.periods.find((p) => p.label === '2026-01')!.persistence!;
-    const repo = calculatePersistence(stream, (commit) => !commit.tags.automated, {
+    const repo = calculateRapidRetouch(stream, (commit) => !commit.tags.automated, {
       observationEnd: NOW,
       retouchHorizons: [30],
     });
