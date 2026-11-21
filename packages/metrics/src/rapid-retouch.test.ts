@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { calculatePersistence } from './persistence.js';
+import { calculateRapidRetouch } from './rapid-retouch.js';
 import type { Commit, CommitStream } from '@evidtrail/core';
 
 const isAI = (commit: Commit) => commit.tags.attribution === 'ai';
-const horizon = (result: ReturnType<typeof calculatePersistence>, days: number) =>
+const horizon = (result: ReturnType<typeof calculateRapidRetouch>, days: number) =>
   result.rapidRetouch.find((r) => r.windowDays === days)!;
 
 function makeCommit(overrides: Partial<CommitStream['commits'][0]>): CommitStream['commits'][0] {
@@ -42,10 +42,10 @@ function makeStream(commits: CommitStream['commits']): CommitStream {
   };
 }
 
-describe('calculatePersistence', () => {
+describe('calculateRapidRetouch', () => {
   it('returns zeros when no commit is a target', () => {
     const stream = makeStream([makeCommit({})]);
-    const result = calculatePersistence(stream, isAI);
+    const result = calculateRapidRetouch(stream, isAI);
     expect(result.commitsConsidered).toBe(0);
     expect(result.filesConsidered).toBe(0);
     expect(horizon(result, 7).rate).toBeNull();
@@ -63,7 +63,7 @@ describe('calculatePersistence', () => {
         tags: { attribution: 'unknown' as const, automated: false, mode: 'unknown' as const, evidence: 'none' as const, level: 'none', sources: [] },
       }),
     ]);
-    const result = calculatePersistence(stream, isAI);
+    const result = calculateRapidRetouch(stream, isAI);
     expect(result.commitsConsidered).toBe(1);
   });
 
@@ -90,7 +90,7 @@ describe('calculatePersistence', () => {
         },
       }),
     ]);
-    const result = calculatePersistence(stream, isAI);
+    const result = calculateRapidRetouch(stream, isAI);
     expect(result.commitsConsidered).toBe(1);
     // retouched on day 10: outside the 7-day horizon, inside the 30-day one
     expect(horizon(result, 7)).toMatchObject({ retouched: 0, eligible: 1 });
@@ -133,7 +133,7 @@ describe('calculatePersistence', () => {
         },
       }),
     ]);
-    const result = calculatePersistence(stream, isAI);
+    const result = calculateRapidRetouch(stream, isAI);
     // b.ts: modified after 5 days → retouched within 7
     // a.ts: never touched again, observed 152 days → eligible, not retouched
     expect(horizon(result, 7)).toMatchObject({ retouched: 1, eligible: 2, tooRecent: 0 });
@@ -153,7 +153,7 @@ describe('calculatePersistence', () => {
         },
       }),
     ]);
-    const result = calculatePersistence(stream, isAI);
+    const result = calculateRapidRetouch(stream, isAI);
     // stream generatedAt is 2024-06-01 → observed 152 days with no event
     expect(horizon(result, 90)).toMatchObject({ retouched: 0, eligible: 1, tooRecent: 0, rate: 0 });
   });
@@ -180,7 +180,7 @@ describe('calculatePersistence', () => {
         stats: { totalAdditions: 1, totalDeletions: 0, files: [{ path: 'foo.ts', additions: 1, deletions: 0, status: 'modified' }] },
       }),
     ]);
-    const result = calculatePersistence(stream, isAI);
+    const result = calculateRapidRetouch(stream, isAI);
     // the retouch is the FIRST subsequent touch (2 days), not the last (29)
     expect(horizon(result, 7).retouched).toBe(1);
   });
@@ -202,7 +202,7 @@ describe('calculatePersistence', () => {
         },
       }),
     ]);
-    const result = calculatePersistence(stream, isAI);
+    const result = calculateRapidRetouch(stream, isAI);
     expect(result.filesConsidered).toBe(1); // src/app.ts only
     expect(result.filesExcluded).toBe(2);
   });
@@ -230,7 +230,7 @@ describe('calculatePersistence', () => {
         },
       }),
     ]);
-    const result = calculatePersistence(stream, isAI);
+    const result = calculateRapidRetouch(stream, isAI);
     // Deletion is the first subsequent event, on day 19
     expect(horizon(result, 7)).toMatchObject({ retouched: 0, eligible: 1 });
     expect(horizon(result, 30)).toMatchObject({ retouched: 1, eligible: 1 });
@@ -256,7 +256,7 @@ describe('fixed-horizon rapid retouch contract', () => {
       }),
     ]);
 
-    expect(calculatePersistence(stream, isAI).rapidRetouch[0]).toEqual({
+    expect(calculateRapidRetouch(stream, isAI).rapidRetouch[0]).toEqual({
       windowDays: 7,
       retouched: 1,
       eligible: 1,
@@ -285,7 +285,7 @@ describe('fixed-horizon rapid retouch contract', () => {
       }),
     ]);
 
-    const result = calculatePersistence(stream, isAI);
+    const result = calculateRapidRetouch(stream, isAI);
     // the child is the retouch, and an impossible negative clock gap clamps
     // to day 0 instead of falling outside every horizon
     expect(horizon(result, 7)).toMatchObject({ retouched: 1, eligible: 1 });
@@ -304,7 +304,7 @@ describe('fixed-horizon rapid retouch contract', () => {
       generatedAt: '2024-01-06T00:00:00.000Z',
     };
 
-    expect(calculatePersistence(stream, isAI).rapidRetouch[0]).toEqual({
+    expect(calculateRapidRetouch(stream, isAI).rapidRetouch[0]).toEqual({
       windowDays: 7,
       retouched: 0,
       eligible: 0,
@@ -334,10 +334,10 @@ describe('observation end under --until', () => {
       generatedAt: '2026-09-18T00:00:00.000Z',
       until: '2026-01-02T00:00:00.000Z',
     };
-    const week = calculatePersistence(stream, isAI).rapidRetouch.find((r) => r.windowDays === 7)!;
+    const week = calculateRapidRetouch(stream, isAI).rapidRetouch.find((r) => r.windowDays === 7)!;
     expect(week).toMatchObject({ retouched: 0, eligible: 0, tooRecent: 1, rate: null });
     // and the same file, observed to the collection date, is eligible
-    const unbounded = calculatePersistence({ ...stream, until: undefined }, isAI).rapidRetouch.find((r) => r.windowDays === 7)!;
+    const unbounded = calculateRapidRetouch({ ...stream, until: undefined }, isAI).rapidRetouch.find((r) => r.windowDays === 7)!;
     expect(unbounded).toMatchObject({ retouched: 0, eligible: 1, tooRecent: 0, rate: 0 });
   });
 
@@ -350,9 +350,9 @@ describe('observation end under --until', () => {
         stats: { totalAdditions: 1, totalDeletions: 0, files: [{ path: 'f.ts', additions: 1, deletions: 0 }] },
       }),
     ]);
-    const later = calculatePersistence({ ...base, until: '2030-01-01T00:00:00.000Z' }, isAI);
-    const relative = calculatePersistence({ ...base, until: '10d' }, isAI); // pre-fix streams stored the flag text
-    const plain = calculatePersistence(base, isAI);
+    const later = calculateRapidRetouch({ ...base, until: '2030-01-01T00:00:00.000Z' }, isAI);
+    const relative = calculateRapidRetouch({ ...base, until: '10d' }, isAI); // pre-fix streams stored the flag text
+    const plain = calculateRapidRetouch(base, isAI);
     expect(later).toEqual(plain);
     expect(relative).toEqual(plain);
   });
@@ -369,7 +369,7 @@ describe('renames follow the file', () => {
   const commit = (hash: string, date: string, files: ReturnType<typeof file>[]) =>
     makeCommit({ hash, authorDate: date, tags: aiTags, stats: { totalAdditions: 0, totalDeletions: 0, files } });
   const week = (stream: CommitStream) =>
-    calculatePersistence(stream, isAI).rapidRetouch.find((r) => r.windowDays === 7)!;
+    calculateRapidRetouch(stream, isAI).rapidRetouch.find((r) => r.windowDays === 7)!;
 
   it('counts an edit after a rename as a retouch of the original file', () => {
     // old.ts (1 Jan) → new.ts (2 Jan, pure rename) → edited (4 Jan). Before:
@@ -381,7 +381,7 @@ describe('renames follow the file', () => {
       commit('c', '2024-01-04T00:00:00.000Z', [file('new.ts', 1, 1)]),
     ]);
     expect(week(stream)).toMatchObject({ retouched: 1, eligible: 1, tooRecent: 0, rate: 1 });
-    expect(calculatePersistence(stream, isAI).filesConsidered).toBe(1);
+    expect(calculateRapidRetouch(stream, isAI).filesConsidered).toBe(1);
   });
 
   it('does not count a pure rename as a touch, and does not open a lifecycle with one', () => {
@@ -401,7 +401,7 @@ describe('renames follow the file', () => {
       }), // not a target commit
       commit('b', '2024-01-02T00:00:00.000Z', [file('new.ts', 0, 0, 'old.ts')]),
     ]);
-    expect(calculatePersistence(moveOnly, isAI).filesConsidered).toBe(0);
+    expect(calculateRapidRetouch(moveOnly, isAI).filesConsidered).toBe(0);
   });
 
   it('counts a rename that also edits as a touch', () => {
@@ -410,5 +410,16 @@ describe('renames follow the file', () => {
       commit('b', '2024-01-03T00:00:00.000Z', [file('new.ts', 1, 1, 'old.ts')]),
     ]);
     expect(week(stream)).toMatchObject({ retouched: 1, eligible: 1 });
+  });
+});
+
+// 2.1 renamed the function after what it computes. The old names are part of
+// the published API, so an importer must keep compiling until the next major.
+describe('names from before 2.1', () => {
+  it('still point to the same implementation', async () => {
+    const metrics = await import('./index.js');
+    expect(metrics.calculatePersistence).toBe(metrics.calculateRapidRetouch);
+    expect(metrics.Persistence).toBe(metrics.RetouchSummary);
+    expect(metrics.RepoQuality).toBe(metrics.RepoChangeSignals);
   });
 });

@@ -1,6 +1,6 @@
 import { Commit, CommitStream } from '@evidtrail/core';
 import { observationEndOf } from './observation.js';
-import { calculatePersistence } from './persistence.js';
+import { calculateRapidRetouch } from './rapid-retouch.js';
 import { Trend, TrendComparability, TrendGranularity, TrendPeriod } from './schema/metrics.js';
 
 // Change signals over time (#77, step 3).
@@ -41,7 +41,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface TrendOptions {
   granularity?: TrendGranularity;
-  // Equal observation window applied to every period (#29's mechanism)
+  // The fixed horizon every period is judged on, and the time a period must
+  // have been over before it is compared
   observationDays?: number;
   // Periods kept, most recent first. A 15-year repo has 180 months; a
   // hundred-row table is not a trend anyone reads.
@@ -174,7 +175,7 @@ export function calculateTrend(commitStream: CommitStream, options: TrendOptions
 
     // Both denominators are reported, because they differ: coverage is the
     // evidence axis over every commit (automation carries known provenance),
-    // while quality is measured over authored code only. Two counts under
+    // while retouch is measured over authored code only. Two counts under
     // one heading with the difference left implicit is the defect this
     // project keeps finding in its own reports.
     const withEvidence = periodCommits.filter((commit) => commit.tags.evidence !== 'none').length;
@@ -189,7 +190,7 @@ export function calculateTrend(commitStream: CommitStream, options: TrendOptions
         periodCommits.length > 0 ? round(withEvidence / periodCommits.length, 4) : null,
       persistence:
         authoredCommits.length > 0
-          ? calculatePersistence(commitStream, isTarget, {
+          ? calculateRapidRetouch(commitStream, isTarget, {
               observationEnd,
               retouchHorizons: [observationDays],
             })

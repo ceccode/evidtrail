@@ -15,12 +15,12 @@ function formatDelta(value: number, suffix: string): string {
   return `${sign}${value}${suffix}`;
 }
 
-type Persistence = Metrics['repo']['persistence'];
+type RetouchSummary = Metrics['repo']['persistence'];
 
 function rapidRetouch(
-  persistence: Persistence,
+  persistence: RetouchSummary,
   days: number
-): Persistence['rapidRetouch'][number] | null {
+): RetouchSummary['rapidRetouch'][number] | null {
   return persistence.rapidRetouch.find((result) => result.windowDays === days) ?? null;
 }
 

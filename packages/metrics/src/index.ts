@@ -7,17 +7,17 @@ import {
   PRStream,
   formatISODate,
 } from '@evidtrail/core';
-import { calculatePersistence } from './persistence.js';
+import { calculateRapidRetouch } from './rapid-retouch.js';
 import { calculateLineSurvival } from './line-survival.js';
 import { calculateOutcomeCorrelation } from './outcome-correlation.js';
 import { calculatePRAcceptance } from './pr-acceptance.js';
 import { calculateTrend, TrendOptions } from './trend.js';
 import { observationEndOf } from './observation.js';
-import { Attribution, Metrics, RepoQuality } from './schema/metrics.js';
+import { Attribution, Metrics, RepoChangeSignals } from './schema/metrics.js';
 
 export * from './schema/metrics.js';
 export * from './file-category.js';
-export * from './persistence.js';
+export * from './rapid-retouch.js';
 export * from './pr-acceptance.js';
 export * from './line-survival.js';
 export * from './outcome-correlation.js';
@@ -41,7 +41,7 @@ export interface MetricsOptions {
   blameStream?: BlameStream | null;
   // Window for linking a hotfix to its likely antecedent (#26)
   hotfixWindowDays?: number;
-  // Quality-over-time series (#77 step 3)
+  // Change signals over time (#77 step 3)
   trend?: TrendOptions;
 }
 
@@ -150,13 +150,13 @@ function calculateAttribution(
 
   // Repository change signals (#77, step 1). Computed over ALL authored
   // commits: no cohort, no evidence requirement, nothing a prior could move.
-function calculateRepoSignals(commitStream: CommitStream, asOf: Date): RepoQuality {
+function calculateRepoSignals(commitStream: CommitStream, asOf: Date): RepoChangeSignals {
   const isAuthored = (commit: Commit) => !commit.tags.automated;
   const authoredCount = commitStream.commits.filter(isAuthored).length;
   return {
     commitsAuthored: authoredCount,
     commitsAutomated: commitStream.commits.length - authoredCount,
-    persistence: calculatePersistence(commitStream, isAuthored, { observationEnd: asOf }),
+    persistence: calculateRapidRetouch(commitStream, isAuthored, { observationEnd: asOf }),
   };
 }
 

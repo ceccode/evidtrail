@@ -97,7 +97,7 @@ export const RapidRetouch = z.object({
 // 7-day `rework` block were removed in schema v4: the averages mixed event
 // durations with censored follow-up, and `rework` was the 7-day rapid
 // retouch under a second name.
-export const Persistence = z.object({
+export const RetouchSummary = z.object({
   commitsConsidered: z.number().int().nonnegative(),
   filesConsidered: z.number().int().nonnegative(),
   filesExcluded: z.number().int().nonnegative(),
@@ -243,13 +243,13 @@ export const LineSurvival = z.object({
 // Repository change signals (#77, step 1): a property of the REPO, not of a
 // cohort. Computable at 0% evidence coverage, and nothing in it depends on
 // attribution.
-export const RepoQuality = z.object({
+export const RepoChangeSignals = z.object({
   // Authored commits: everything except automation (merge commits, release
   // bots). Automation is not authored code, whoever ran it.
   commitsAuthored: z.number().int().nonnegative(),
   commitsAutomated: z.number().int().nonnegative(),
   // Rapid retouch over ALL authored commits, cohort-free
-  persistence: Persistence,
+  persistence: RetouchSummary,
 });
 
 // Change signals over time (#77, step 3): the repo compared with its own
@@ -263,7 +263,7 @@ export const TrendPeriod = z.object({
   start: z.string().datetime(),
   end: z.string().datetime(), // exclusive
   // Both denominators, stated: coverage spans every commit (automation has
-  // known provenance), quality spans authored ones only.
+  // known provenance), retouch spans authored ones only.
   commitsTotal: z.number().int().nonnegative(),
   commitsAuthored: z.number().int().nonnegative(),
   // Null when the period contains no commits at all
@@ -271,7 +271,7 @@ export const TrendPeriod = z.object({
   // Null when the period has no authored commits. Every period is measured
   // through the same observation window, so periods are comparable with each
   // other rather than with the clock.
-  persistence: Persistence.nullable(),
+  persistence: RetouchSummary.nullable(),
   // False until the period has been over for `observationDays`: its files
   // have not all had the full window yet, so it is reported but never
   // compared. Without this every report would find retouch "rising".
@@ -288,7 +288,7 @@ export const TrendDelta = z.object({
 // answers "have both had the same time?"; this answers "is there enough in
 // each, and are they alike enough, for a delta to mean anything?". Found on
 // this repository: 5 commits/18 files against 18 commits/53 files, with two
-// empty months between, rendered as a +60.9 pt quality change. The delta
+// empty months between, rendered as a +60.9 pt change. The delta
 // is still computed — labelling, never substituting a friendlier pair.
 export const TrendComparability = z.object({
   eligible: z.object({ from: z.number().int().nonnegative(), to: z.number().int().nonnegative() }),
@@ -336,7 +336,7 @@ export const Metrics = z.object({
   headSha: z.string(),
   attribution: Attribution,
   // Repository change signals (#77): cohort-free and attribution-free
-  repo: RepoQuality,
+  repo: RepoChangeSignals,
   // The same signals, over time (#77 step 3)
   trend: Trend,
   // Reverts and hotfixes linked to the commit(s) they respond to (#26).
@@ -361,8 +361,21 @@ export type RevertStats = z.infer<typeof RevertStats>;
 export type HotfixStats = z.infer<typeof HotfixStats>;
 export type OutcomeCorrelation = z.infer<typeof OutcomeCorrelation>;
 export type LineSurvival = z.infer<typeof LineSurvival>;
-export type Persistence = z.infer<typeof Persistence>;
-export type RepoQuality = z.infer<typeof RepoQuality>;
+export type RetouchSummary = z.infer<typeof RetouchSummary>;
+export type RepoChangeSignals = z.infer<typeof RepoChangeSignals>;
+
+// Names from before 2.1, kept so importers of @evidtrail/metrics keep
+// compiling. The JSON fields `repo.persistence` and
+// `trend.periods[].persistence` keep their names until the next major:
+// renaming a field is a schema change, not a refactor.
+/** @deprecated Renamed to {@link RetouchSummary}. */
+export const Persistence = RetouchSummary;
+/** @deprecated Renamed to {@link RetouchSummary}. */
+export type Persistence = RetouchSummary;
+/** @deprecated Renamed to {@link RepoChangeSignals}. */
+export const RepoQuality = RepoChangeSignals;
+/** @deprecated Renamed to {@link RepoChangeSignals}. */
+export type RepoQuality = RepoChangeSignals;
 export type TrendGranularity = z.infer<typeof TrendGranularity>;
 export type TrendPeriod = z.infer<typeof TrendPeriod>;
 export type TrendComparability = z.infer<typeof TrendComparability>;
