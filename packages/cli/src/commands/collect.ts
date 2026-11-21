@@ -1,5 +1,14 @@
 import { Command } from 'commander';
-import { collectCommits, writeJSON, createLogger, describeError } from '@evidtrail/core';
+import {
+  type CollectOptions,
+  type CommitStream,
+  type EvidtrailConfig,
+  type Logger,
+  collectCommits,
+  writeJSON,
+  createLogger,
+  describeError,
+} from '@evidtrail/core';
 import { join } from 'path';
 import { CLIConfig } from '../schema/config.js';
 import { detectPRBaseRef } from '../providers/pr-base.js';
@@ -7,6 +16,81 @@ import { loadConfig } from '../config/load.js';
 
 function collectRepeatable(value: string, previous: string[]): string[] {
   return previous ? [...previous, value] : [value];
+}
+
+type DetectionLists = Required<
+  Pick<CollectOptions, 'aiPatterns' | 'aiTools' | 'aiTrailerDomains' | 'aiBotBlocklist'>
+>;
+
+// Flags add to the lists in .evidtrail.json; they never replace them.
+export function detectionListsFrom(config: CLIConfig, fileConfig: Partial<EvidtrailConfig>): DetectionLists {
+  return {
+    aiPatterns: [...(fileConfig.patterns || []), ...config.aiPatterns],
+    aiTools: [...(fileConfig.tools || []), ...config.aiTools],
+    aiTrailerDomains: [...(fileConfig.trailerDomains || []), ...config.aiTrailerDomains],
+    aiBotBlocklist: [...(fileConfig.botBlocklist || []), ...config.aiBotBlocklist],
+  };
+}
+
+function logCustomLists(lists: DetectionLists, logger: Logger): void {
+  if (lists.aiTools.length > 0) logger.info(`Custom AI tools: ${lists.aiTools.join(', ')}`);
+  if (lists.aiTrailerDomains.length > 0) logger.info(`Custom trailer domains: ${lists.aiTrailerDomains.join(', ')}`);
+  if (lists.aiBotBlocklist.length > 0) logger.info(`Custom bot blocklist: ${lists.aiBotBlocklist.join(', ')}`);
+}
+
+// --diff-base names the base; --pr asks CI for it, and says so when CI has none.
+function resolveDiffBase(flags: CollectFlags, logger: Logger): string | undefined {
+  if (flags.diffBase || !flags.pr) return flags.diffBase;
+  const detected = detectPRBaseRef();
+  if (detected) {
+    logger.info(`PR mode: detected base ref ${detected}`);
+    return detected;
+  }
+  logger.warn('--pr flag used but no PR context detected. Falling back to --since mode.');
+  return undefined;
+}
+
+export function attributionSummary(stream: CommitStream): string {
+  const counts = { ai: 0, human: 0, automated: 0, unknown: 0 };
+  for (const commit of stream.commits) counts[commit.tags.attribution]++;
+  return `Attribution: ai ${counts.ai} · human ${counts.human} · automated ${counts.automated} · unknown ${counts.unknown}`;
+}
+
+export interface CollectFlags {
+  pr?: boolean;
+  diffBase?: string;
+}
+
+export async function runCollect(config: CLIConfig, flags: CollectFlags, logger: Logger): Promise<void> {
+  const fileConfig = await loadConfig(config.repo);
+  const lists = detectionListsFrom(config, fileConfig);
+  logCustomLists(lists, logger);
+
+  const diffBase = resolveDiffBase(flags, logger);
+  if (diffBase && config.scope !== 'default-branch') {
+    throw new Error('--scope all-refs cannot be combined with --pr or --diff-base');
+  }
+
+  logger.info('Starting commit collection...');
+  const commitStream = await collectCommits({
+    repoPath: config.repo,
+    // A PR range is defined by its base, not by dates
+    since: diffBase ? undefined : config.since,
+    until: diffBase ? undefined : config.until,
+    diffBase,
+    ...lists,
+    defaultBranch: config.defaultBranch,
+    scope: config.scope,
+    // CLI flag wins over .evidtrail.json
+    redactAuthors: config.redactAuthors ?? fileConfig.redactAuthors ?? false,
+    logger,
+  });
+
+  const outputPath = join(config.outDir, 'commit-stream.json');
+  await writeJSON(outputPath, commitStream);
+  logger.info(`Collected ${commitStream.commits.length} commits`);
+  logger.info(attributionSummary(commitStream));
+  logger.info(`Output written to: ${outputPath}`);
 }
 
 export function createCollectCommand(): Command {
@@ -46,59 +130,7 @@ export function createCollectCommand(): Command {
       const logger = createLogger(config.verbose);
 
       try {
-        // Load .evidtrail.json config (merge with CLI flags)
-        const fileConfig = await loadConfig(config.repo);
-        const aiPatterns = [...(fileConfig.patterns || []), ...config.aiPatterns];
-        const aiTools = [...(fileConfig.tools || []), ...config.aiTools];
-        const aiTrailerDomains = [...(fileConfig.trailerDomains || []), ...config.aiTrailerDomains];
-        const aiBotBlocklist = [...(fileConfig.botBlocklist || []), ...config.aiBotBlocklist];
-
-        if (aiTools.length > 0) logger.info(`Custom AI tools: ${aiTools.join(', ')}`);
-        if (aiTrailerDomains.length > 0) logger.info(`Custom trailer domains: ${aiTrailerDomains.join(', ')}`);
-        if (aiBotBlocklist.length > 0) logger.info(`Custom bot blocklist: ${aiBotBlocklist.join(', ')}`);
-
-        // Determine diffBase for PR-scoped analysis
-        let diffBase: string | undefined = options.diffBase;
-        if (options.pr && !diffBase) {
-          diffBase = detectPRBaseRef() ?? undefined;
-          if (diffBase) {
-            logger.info(`PR mode: detected base ref ${diffBase}`);
-          } else {
-            logger.warn('--pr flag used but no PR context detected. Falling back to --since mode.');
-          }
-        }
-        if (diffBase && config.scope !== 'default-branch') {
-          throw new Error('--scope all-refs cannot be combined with --pr or --diff-base');
-        }
-
-        logger.info('Starting commit collection...');
-
-        const commitStream = await collectCommits({
-          repoPath: config.repo,
-          since: diffBase ? undefined : config.since,
-          until: diffBase ? undefined : config.until,
-          diffBase,
-          aiPatterns,
-          aiTools,
-          aiTrailerDomains,
-          aiBotBlocklist,
-          defaultBranch: config.defaultBranch,
-          scope: config.scope,
-          // CLI flag wins over .evidtrail.json
-          redactAuthors: config.redactAuthors ?? fileConfig.redactAuthors ?? false,
-          logger,
-        });
-
-        const outputPath = join(config.outDir, 'commit-stream.json');
-        await writeJSON(outputPath, commitStream);
-
-        logger.info(`Collected ${commitStream.commits.length} commits`);
-        const counts = { ai: 0, human: 0, automated: 0, unknown: 0 };
-        for (const c of commitStream.commits) counts[c.tags.attribution]++;
-        logger.info(
-          `Attribution: ai ${counts.ai} · human ${counts.human} · automated ${counts.automated} · unknown ${counts.unknown}`
-        );
-        logger.info(`Output written to: ${outputPath}`);
+        await runCollect(config, { pr: options.pr, diffBase: options.diffBase }, logger);
       } catch (error) {
         logger.error(
           `Collection failed: ${describeError(error)}`
