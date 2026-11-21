@@ -1,23 +1,11 @@
 import { Command } from 'commander';
-import {
-  readJSON,
-  writeJSON,
-  createLogger,
-  CommitStream,
-  COMMIT_STREAM_SCHEMA_VERSION,
-  BlameStream,
-  BLAME_STREAM_SCHEMA_VERSION,
-  PRStream,
-  PR_STREAM_SCHEMA_VERSION,
-  assertSchemaVersion,
-  fileExists,
-  describeError,
-} from '@evidtrail/core';
+import { writeJSON, createLogger, fileExists, describeError } from '@evidtrail/core';
 import { calculateMetrics } from '@evidtrail/metrics';
 import { join, resolve } from 'path';
 import { CLIConfig } from '../schema/config.js';
 import { HOOK_NAME, isHookInstalled } from '../hooks/detect.js';
 import { findConfigFile, loadConfig } from '../config/load.js';
+import { readBlameStream, readCommitStream, readPRStream } from '../artifacts.js';
 
 export function createAnalyzeCommand(): Command {
   return new Command('analyze')
@@ -52,17 +40,7 @@ export function createAnalyzeCommand(): Command {
       try {
         logger.info('Starting metrics analysis...');
 
-        const inputPath = join(config.outDir, 'commit-stream.json');
-        // Version gate before schema parsing, so an incompatible file gives an
-        // actionable message instead of a zod dump (#53)
-        const raw = await readJSON<unknown>(inputPath);
-        assertSchemaVersion(
-          raw,
-          COMMIT_STREAM_SCHEMA_VERSION,
-          'commit-stream.json',
-          "Rerun 'evidtrail collect' with this version of evidtrail."
-        );
-        const commitStream = CommitStream.parse(raw);
+        const commitStream = await readCommitStream(config.outDir);
 
         logger.info(`Analyzing ${commitStream.commits.length} commits`);
 
@@ -84,14 +62,7 @@ export function createAnalyzeCommand(): Command {
         const prStreamPath = join(config.outDir, 'pr-stream.json');
         let prStream = null;
         if (await fileExists(prStreamPath)) {
-          const rawPRs = await readJSON<unknown>(prStreamPath);
-          assertSchemaVersion(
-            rawPRs,
-            PR_STREAM_SCHEMA_VERSION,
-            'pr-stream.json',
-            "Rerun 'evidtrail fetch-prs' with this version of evidtrail."
-          );
-          prStream = PRStream.parse(rawPRs);
+          prStream = await readPRStream(prStreamPath);
           logger.info(`PR outcomes loaded: ${prStream.prs.length} closed PR(s)`);
         }
 
@@ -111,14 +82,7 @@ export function createAnalyzeCommand(): Command {
         const blamePath = join(config.outDir, 'blame-stream.json');
         let blameStream = null;
         if (await fileExists(blamePath)) {
-          const rawBlame = await readJSON<unknown>(blamePath);
-          assertSchemaVersion(
-            rawBlame,
-            BLAME_STREAM_SCHEMA_VERSION,
-            'blame-stream.json',
-            "Rerun 'evidtrail blame' with this version of evidtrail."
-          );
-          blameStream = BlameStream.parse(rawBlame);
+          blameStream = await readBlameStream(blamePath);
           if (resolve(blameStream.repoPath) !== resolve(commitStream.repoPath)) {
             throw new Error(
               'blame-stream.json belongs to a different repository. Remove it or rerun `evidtrail blame` for the collected repo.'

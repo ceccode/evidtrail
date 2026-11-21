@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
-import { dirname } from 'path';
-import type { ZodType } from 'zod';
+import { basename, dirname } from 'path';
+import type { ZodType, ZodTypeDef } from 'zod';
+import { assertSchemaVersion } from '../schema/version.js';
 
 export async function ensureDir(dirPath: string): Promise<void> {
   try {
@@ -25,6 +26,21 @@ export async function readJSON<T>(filePath: string, schema?: ZodType<T>): Promis
     return schema.parse(data);
   }
   return data as T;
+}
+
+// Reads an evidtrail artifact. The version is checked before the schema, so
+// an incompatible file gets an actionable message instead of a wall of zod
+// issues (#53).
+export async function readVersionedJSON<T>(
+  filePath: string,
+  // The input side is `unknown`: schemas with defaults accept less than they return
+  schema: ZodType<T, ZodTypeDef, unknown>,
+  expectedVersion: number,
+  remedy: string
+): Promise<T> {
+  const raw = await readJSON<unknown>(filePath);
+  assertSchemaVersion(raw, expectedVersion, basename(filePath), remedy);
+  return schema.parse(raw);
 }
 
 export async function fileExists(filePath: string): Promise<boolean> {

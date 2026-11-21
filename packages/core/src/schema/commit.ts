@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CommitTags } from './tags.js';
 
 export const FileChange = z.object({
   path: z.string(),
@@ -26,28 +27,7 @@ export const Commit = z.object({
   // collect time ("This reverts commit <sha>."). Null for non-revert
   // commits, or when the target isn't in the standard git-generated form.
   revertsCommit: z.string().nullable().default(null),
-  // Two orthogonal axes (#25). `mode` is what happened, `evidence` is how we
-  // know it; everything else here is derived from them.
-  tags: z.object({
-    // PRIMARY AXIS — involvement. The question that still discriminates risk
-    // once "was AI involved?" trends to yes everywhere.
-    mode: z.enum(['none', 'autocomplete', 'assisted', 'agent', 'unknown']),
-    // PRIMARY AXIS — evidence. 'declared' = stated at commit time (AI-Mode
-    // trailer, manifest); 'inferred' = derived from tool identity or
-    // structure; 'none' = no signal, which is what `unknown` used to mean.
-    evidence: z.enum(['declared', 'inferred', 'none']),
-    // Automation with known provenance (#39): merge commits, release bots.
-    // Orthogonal to the two axes — automation is not authored code, so it
-    // joins no autonomy cohort regardless of what mode it would infer.
-    automated: z.boolean(),
-    // DERIVED — the three-state projection (#34), kept because a headline
-    // needs one word. See `projectAttribution`: it is a view of the axes
-    // above, never an independent judgement.
-    attribution: z.enum(['ai', 'human', 'automated', 'unknown']),
-    // DERIVED — strength of the message heuristic that fired, if any
-    level: z.enum(['explicit', 'implicit', 'mention', 'none']),
-    sources: z.array(z.string()), // which heuristic matched
-  }),
+  tags: CommitTags,
   // `AI-Session: <agent>/<id>` (opt-in, written by the hook): the agent
   // session that produced this commit. Absent on most commits.
   session: z.object({ agent: z.string(), id: z.string() }).optional(),

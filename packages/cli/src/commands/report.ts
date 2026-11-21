@@ -1,15 +1,10 @@
 import { Command } from 'commander';
-import {
-  readJSON,
-  createLogger,
-  METRICS_SCHEMA_VERSION,
-  assertSchemaVersion,
-  describeError,
-} from '@evidtrail/core';
-import { Metrics } from '@evidtrail/metrics';
+import { createLogger, describeError } from '@evidtrail/core';
+import type { Metrics } from '@evidtrail/metrics';
 import { join } from 'path';
 import { promises as fs } from 'fs';
 import { CLIConfig } from '../schema/config.js';
+import { readMetrics } from '../artifacts.js';
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
@@ -397,15 +392,7 @@ export function createReportCommand(): Command {
       try {
         logger.info('Generating report...');
 
-        const inputPath = join(config.outDir, 'metrics.json');
-        const raw = await readJSON<unknown>(inputPath);
-        assertSchemaVersion(
-          raw,
-          METRICS_SCHEMA_VERSION,
-          'metrics.json',
-          "Rerun 'evidtrail analyze' with this version of evidtrail."
-        );
-        const metrics = Metrics.parse(raw);
+        const metrics = await readMetrics(config.outDir);
 
         const markdown = generateMarkdownReport(metrics);
         const mdPath = join(config.outDir, 'report.md');

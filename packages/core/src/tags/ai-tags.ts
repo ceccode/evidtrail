@@ -1,9 +1,10 @@
+import type { AIMode } from '../schema/tags.js';
+
 export type AILevel = 'explicit' | 'implicit' | 'mention' | 'none';
 
-// PRIMARY AXIS 1 — involvement (#25): what level of AI participated. The
-// durable dimension in an AI-first world, where "was AI involved" trends
-// toward "yes" and stops discriminating anything.
-export type AIMode = 'none' | 'autocomplete' | 'assisted' | 'agent' | 'unknown';
+// PRIMARY AXIS 1 — involvement (#25): what level of AI participated, as
+// `AIMode` in schema/tags.ts. The durable dimension in an AI-first world,
+// where "was AI involved" trends toward "yes" and stops discriminating.
 
 // PRIMARY AXIS 2 — evidence (#25): how we know. 'declared' = someone stated
 // it (AI-Mode or Assisted-by trailer, manifest); 'inferred' = we concluded it from tool

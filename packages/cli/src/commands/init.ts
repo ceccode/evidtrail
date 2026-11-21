@@ -3,7 +3,7 @@ import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import { promisify } from 'util';
-import { createLogger, describeError } from '@evidtrail/core';
+import { createLogger, describeError, DECLARABLE_MODES, DeclaredMode } from '@evidtrail/core';
 import { isGitRepository } from '../hooks/detect.js';
 import { installHook } from '../hooks/install.js';
 import { CONFIG_FILENAME, findConfigFile } from '../config/load.js';
@@ -19,12 +19,9 @@ const execFileAsync = promisify(execFile);
 // additive: a file that exists is left alone and reported, so re-running is
 // free and a hand-edited setup is never clobbered.
 
-const MODES = ['none', 'autocomplete', 'assisted', 'agent'] as const;
-type Mode = (typeof MODES)[number];
-
 export interface InitOptions {
   repoPath: string;
-  defaultMode?: Mode;
+  defaultMode?: DeclaredMode;
   workflow: boolean;
   prepare: boolean;
 }
@@ -253,8 +250,8 @@ export function createInitCommand(): Command {
     .action(async (options) => {
       const logger = createLogger(false);
       try {
-        if (options.defaultMode && !MODES.includes(options.defaultMode)) {
-          throw new Error(`Invalid --default-mode "${options.defaultMode}": expected ${MODES.join(', ')}`);
+        if (options.defaultMode && !DeclaredMode.safeParse(options.defaultMode).success) {
+          throw new Error(`Invalid --default-mode "${options.defaultMode}": expected ${DECLARABLE_MODES.join(', ')}`);
         }
         const steps = await runInit({
           repoPath: options.repo,

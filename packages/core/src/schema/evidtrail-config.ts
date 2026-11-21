@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DeclaredMode } from './tags.js';
 
 export const EvidtrailConfig = z.object({
   tools: z.array(z.string()).default([]),
@@ -15,7 +16,7 @@ export const EvidtrailConfig = z.object({
   //     and applied to nothing: a repository setting is not a statement about
   //     any past commit, so history predating the hook stays `unknown`.
   // Absent means: leave unknown rather than guess.
-  defaultMode: z.enum(['none', 'autocomplete', 'assisted', 'agent']).optional(),
+  defaultMode: DeclaredMode.optional(),
   // Replace author/committer identities with a per-run salted hash (#35).
   // Recommended in CI, where commit-stream.json leaves the machine.
   redactAuthors: z.boolean().default(false),

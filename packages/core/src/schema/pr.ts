@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CommitTags } from './tags.js';
 
 // Pull request stream (#51) — the successor data source to merge ratio.
 //
@@ -18,15 +19,7 @@ export const PR_STREAM_SCHEMA_VERSION = 2;
 
 export const PRCommit = z.object({
   sha: z.string(),
-  // Same two-axis shape as a Commit's tags (#25)
-  tags: z.object({
-    mode: z.enum(['none', 'autocomplete', 'assisted', 'agent', 'unknown']),
-    evidence: z.enum(['declared', 'inferred', 'none']),
-    automated: z.boolean(),
-    attribution: z.enum(['ai', 'human', 'automated', 'unknown']),
-    level: z.enum(['explicit', 'implicit', 'mention', 'none']),
-    sources: z.array(z.string()),
-  }),
+  tags: CommitTags,
 });
 
 export const PullRequest = z.object({
