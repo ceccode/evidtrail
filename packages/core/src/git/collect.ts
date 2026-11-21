@@ -8,8 +8,8 @@ import {
   loadAttributionManifest,
   unmatchedManifestHashes,
 } from '../tags/attribution-manifest.js';
-import { createRedactor } from '../tags/redact.js';
-import { logWithStats } from './log.js';
+import { createRedactor, type Redactor } from '../tags/redact.js';
+import { logWithStats, type RawCommit } from './log.js';
 import { parseRelativeDate, formatISODate } from '../utils/dates.js';
 import { Logger } from '../utils/log.js';
 
@@ -136,6 +136,124 @@ async function resolveDefaultBranchRef(
   throw new Error(`Could not resolve default branch '${defaultBranch}' locally or from origin.`);
 }
 
+// `--after`/`--before` for a date-bounded walk. The same bounds restrict the
+// commits collected and the default-branch membership computed for them.
+function dateBoundArgs(sinceDate: Date | undefined, untilDate: Date | undefined): string[] {
+  const args: string[] = [];
+  if (sinceDate) args.push(`--after=${sinceDate.toISOString()}`);
+  if (untilDate) args.push(`--before=${untilDate.toISOString()}`);
+  return args;
+}
+
+// An empty repository has no HEAD, so every later git call fails with a raw
+// "ambiguous argument" error. A valid empty stream is the honest answer:
+// nothing to measure is not a crash.
+function emptyStream(options: CollectOptions): CommitStream {
+  return {
+    schemaVersion: COMMIT_STREAM_SCHEMA_VERSION,
+    repoPath: options.repoPath,
+    defaultBranch: options.defaultBranch ?? 'main',
+    scope: options.diffBase ? 'pr' : (options.scope ?? 'default-branch'),
+    headSha: '',
+    generatedAt: formatISODate(new Date()),
+    since: options.since,
+    until: options.until,
+    aiPatterns: [...(options.aiPatterns ?? [])],
+    commits: [],
+  };
+}
+
+// A shallow clone silently truncates history, so every metric would describe
+// a fragment while looking like a full report. `actions/checkout` defaults to
+// `fetch-depth: 1`, which makes this the single most likely way for a CI run
+// to produce confidently wrong numbers.
+async function warnIfShallow(git: SimpleGit, logger?: Logger): Promise<void> {
+  if (await isShallowRepository(git)) {
+    logger?.warn(
+      'This is a SHALLOW clone: history is truncated, so all metrics describe only the fetched commits. ' +
+        'Set `fetch-depth: 0` in actions/checkout (or `GIT_DEPTH: 0` in GitLab CI) for meaningful results.'
+    );
+  }
+}
+
+// In PR mode membership is measured against diffBase (e.g. `origin/main`),
+// not the bare default-branch name: a PR checkout only has the
+// remote-tracking ref, so `main` is unresolvable while `origin/main` exists.
+async function prBaseHashes(git: SimpleGit, diffBase: string): Promise<Set<string>> {
+  try {
+    const mergeBase = (await git.raw(['merge-base', diffBase, 'HEAD'])).trim();
+    const bounded = (await git.raw(['rev-list', `${mergeBase}..${diffBase}`])).trim().split('\n').filter(Boolean);
+    // Include merge-base itself
+    bounded.push(mergeBase);
+    return new Set(bounded);
+  } catch {
+    // Fallback: full rev-list if merge-base fails (e.g., unrelated histories)
+    return new Set((await git.raw(['rev-list', diffBase])).trim().split('\n').filter(Boolean));
+  }
+}
+
+interface CommitContext {
+  tagProvenance: ReturnType<typeof createProvenanceTagger>;
+  redactor: Redactor | null;
+  defaultBranchHashes: Set<string>;
+}
+
+function toCommit(raw: RawCommit, context: CommitContext): Commit {
+  const { redactor } = context;
+  const session = sessionRef(raw.message);
+  // Revert target (#26): only the standard git-generated body line links a
+  // revert back to what it reverted; parsed from the full message, since the
+  // stored `message` field is subject-only.
+  const revertMatch = raw.message.match(REVERT_TARGET);
+  return {
+    hash: raw.hash,
+    authorName: redactor ? redactor.name(raw.authorName) : raw.authorName,
+    authorEmail: redactor ? redactor.email(raw.authorEmail) : raw.authorEmail,
+    authorDate: new Date(raw.authorDate).toISOString(),
+    committerName: redactor ? redactor.name(raw.committerName) : raw.committerName,
+    committerEmail: redactor ? redactor.email(raw.committerEmail) : raw.committerEmail,
+    committerDate: new Date(raw.committerDate).toISOString(),
+    message: raw.message.split('\n')[0],
+    parents: raw.parents,
+    inDefaultBranchAncestry: context.defaultBranchHashes.has(raw.hash),
+    revertsCommit: revertMatch ? revertMatch[1] : null,
+    // Tagged on the full message, body included, for trailers like Co-Authored-By
+    tags: context.tagProvenance(raw),
+    ...(session ? { session } : {}),
+    stats: raw.stats,
+  };
+}
+
+// Deduplicates (the same hash can appear from several refs) and, in PR mode,
+// drops the CI-generated PR merge head (#40): `diffBase..HEAD` would
+// otherwise include a commit authored by nobody.
+function buildCommits(
+  rawCommits: RawCommit[],
+  context: CommitContext,
+  prMode: boolean,
+  logger?: Logger
+): Commit[] {
+  const seen = new Set<string>();
+  const commits: Commit[] = [];
+  let syntheticMergesDropped = 0;
+  for (const raw of rawCommits) {
+    if (seen.has(raw.hash)) continue;
+    seen.add(raw.hash);
+    if (prMode && isSyntheticPRMerge(raw)) {
+      syntheticMergesDropped++;
+      continue;
+    }
+    logger?.debug(`Processing commit ${raw.hash}`);
+    commits.push(toCommit(raw, context));
+  }
+  if (syntheticMergesDropped > 0) {
+    logger?.info(
+      `Skipped ${syntheticMergesDropped} CI-generated PR merge commit(s) (refs/pull/N/merge)`
+    );
+  }
+  return commits;
+}
+
 export async function collectCommits(options: CollectOptions): Promise<CommitStream> {
   const {
     repoPath,
@@ -158,38 +276,12 @@ export async function collectCommits(options: CollectOptions): Promise<CommitStr
   assertSafeRefArgument(diffBase, 'diff base');
 
   const git = simpleGit(repoPath);
-
-  // An empty repository has no HEAD, so every later git call fails with a
-  // raw "ambiguous argument" error. Return a valid empty stream instead:
-  // nothing to measure is a legitimate answer, not a crash.
   if (await isEmptyRepository(git)) {
     logger?.warn('Repository has no commits yet — nothing to collect.');
-    return {
-      schemaVersion: COMMIT_STREAM_SCHEMA_VERSION,
-      repoPath,
-      defaultBranch: providedDefaultBranch ?? 'main',
-      scope: diffBase ? 'pr' : requestedScope,
-      headSha: '',
-      generatedAt: formatISODate(new Date()),
-      since,
-      until,
-      aiPatterns: [...aiPatterns],
-      commits: [],
-    };
+    return emptyStream(options);
   }
+  await warnIfShallow(git, logger);
 
-  // A shallow clone silently truncates history, so every metric would
-  // describe a fragment while looking like a full report. `actions/checkout`
-  // defaults to `fetch-depth: 1`, which makes this the single most likely
-  // way for a CI run to produce confidently wrong numbers.
-  if (await isShallowRepository(git)) {
-    logger?.warn(
-      'This is a SHALLOW clone: history is truncated, so all metrics describe only the fetched commits. ' +
-        'Set `fetch-depth: 0` in actions/checkout (or `GIT_DEPTH: 0` in GitLab CI) for meaningful results.'
-    );
-  }
-
-  // Detect default branch
   const defaultBranch = providedDefaultBranch || (await detectDefaultBranch(git));
   logger?.info(`Using default branch: ${defaultBranch}`);
 
@@ -207,11 +299,10 @@ export async function collectCommits(options: CollectOptions): Promise<CommitStr
   // Parse dates once (avoids duplicate parsing and timestamp drift)
   const sinceDate = since ? parseRelativeDate(since) : undefined;
   const untilDate = until ? parseRelativeDate(until) : undefined;
+  const bounds = dateBoundArgs(sinceDate, untilDate);
 
   let rangeArgs: string[];
-
   if (diffBase) {
-    // PR-scoped mode: collect only commits between diffBase and HEAD
     logger?.info(`PR-scoped analysis: ${diffBase}..HEAD`);
     rangeArgs = [`${diffBase}..HEAD`];
   } else {
@@ -221,13 +312,7 @@ export async function collectCommits(options: CollectOptions): Promise<CommitStr
     logger?.info(
       `Collecting ${scope === 'all-refs' ? 'all refs' : defaultBranch} from ${sinceDate?.toISOString() || 'beginning'} to ${untilDate?.toISOString() || 'latest reachable commit'}`
     );
-    rangeArgs = scope === 'all-refs' ? ['--all'] : [defaultBranchRef];
-    if (sinceDate) {
-      rangeArgs.push(`--after=${sinceDate.toISOString()}`);
-    }
-    if (untilDate) {
-      rangeArgs.push(`--before=${untilDate.toISOString()}`);
-    }
+    rangeArgs = [...(scope === 'all-refs' ? ['--all'] : [defaultBranchRef]), ...bounds];
   }
 
   // Single batched pass: metadata, parents, and diff stats for all commits
@@ -236,110 +321,40 @@ export async function collectCommits(options: CollectOptions): Promise<CommitStr
     `Found ${rawCommits.length} commits${diffBase ? ' in PR' : scope === 'all-refs' ? ' across all refs' : ` on ${defaultBranch}`}`
   );
 
-  // Get the set of commit hashes reachable from the default branch
-  let defaultBranchHashes: Set<string>;
-  if (diffBase) {
-    // In PR mode compare against diffBase (e.g. `origin/main`), not the bare
-    // default-branch name — a PR checkout only has the remote-tracking ref, so
-    // `main` is unresolvable while `origin/main` exists.
-    try {
-      const mergeBase = (await git.raw(['merge-base', diffBase, 'HEAD'])).trim();
-      const bounded = (await git.raw(['rev-list', `${mergeBase}..${diffBase}`])).trim().split('\n').filter(Boolean);
-      // Include merge-base itself
-      bounded.push(mergeBase);
-      defaultBranchHashes = new Set(bounded);
-    } catch {
-      // Fallback: full rev-list if merge-base fails (e.g., unrelated histories)
-      const all = (await git.raw(['rev-list', diffBase])).trim().split('\n').filter(Boolean);
-      defaultBranchHashes = new Set(all);
-    }
-  } else {
-    // Standard mode: use date filters
-    const revListArgs = [defaultBranchRef];
-    if (sinceDate) {
-      revListArgs.push(`--after=${sinceDate.toISOString()}`);
-    }
-    if (untilDate) {
-      revListArgs.push(`--before=${untilDate.toISOString()}`);
-    }
-    defaultBranchHashes = new Set(
-      (await git.raw(['rev-list', ...revListArgs])).trim().split('\n').filter(Boolean)
-    );
-  }
+  const defaultBranchHashes = diffBase
+    ? await prBaseHashes(git, diffBase)
+    : new Set((await git.raw(['rev-list', defaultBranchRef, ...bounds])).trim().split('\n').filter(Boolean));
   logger?.info(`Default branch commits: ${defaultBranchHashes.size}`);
 
   // Optional retroactive attribution manifest at the repo root (#10)
   const manifest = await loadAttributionManifest(repoPath, logger);
   const manifestIndex = manifest ? indexManifest(manifest) : null;
 
-  // Message heuristics, automation, then the manifest — shared with `trail`
-  const tagProvenance = createProvenanceTagger({
-    patterns: aiPatterns,
-    tools: aiTools,
-    trailerDomains: aiTrailerDomains,
-    botBlocklist: aiBotBlocklist,
-    manifestIndex,
-    logger,
-  });
-
-  // Author redaction (#35). Applied last: identity-based detection above
-  // must see the real values.
+  // Author redaction (#35). Applied last: identity-based detection must see
+  // the real values.
   const redactor = redactAuthors ? createRedactor() : null;
   if (redactor) {
     logger?.info('Author identities redacted with a per-run salted hash');
   }
 
-  // Deduplicate commits (same hash can appear from multiple branches)
-  const seen = new Set<string>();
-  const commits: Commit[] = [];
-  let syntheticMergesDropped = 0;
-  for (const rawCommit of rawCommits) {
-    if (seen.has(rawCommit.hash)) continue;
-    seen.add(rawCommit.hash);
-
-    // Drop the CI-generated PR merge head (#40): PR-scoped mode only, where
-    // `diffBase..HEAD` would otherwise include a commit authored by nobody.
-    if (diffBase && isSyntheticPRMerge(rawCommit)) {
-      syntheticMergesDropped++;
-      continue;
-    }
-
-    logger?.debug(`Processing commit ${rawCommit.hash}`);
-
-    // Tag on the full message (body included, for trailers like Co-Authored-By)
-    const aiTag = tagProvenance(rawCommit);
-    const session = sessionRef(rawCommit.message);
-
-    // Revert target (#26): only the standard git-generated body line links
-    // a revert back to what it reverted; parsed from the full message,
-    // since the stored `message` field below is subject-only.
-    const revertMatch = rawCommit.message.match(REVERT_TARGET);
-
-    const commit: Commit = {
-      hash: rawCommit.hash,
-      authorName: redactor ? redactor.name(rawCommit.authorName) : rawCommit.authorName,
-      authorEmail: redactor ? redactor.email(rawCommit.authorEmail) : rawCommit.authorEmail,
-      authorDate: new Date(rawCommit.authorDate).toISOString(),
-      committerName: redactor ? redactor.name(rawCommit.committerName) : rawCommit.committerName,
-      committerEmail: redactor ? redactor.email(rawCommit.committerEmail) : rawCommit.committerEmail,
-      committerDate: new Date(rawCommit.committerDate).toISOString(),
-      message: rawCommit.message.split('\n')[0],
-      parents: rawCommit.parents,
-      inDefaultBranchAncestry: defaultBranchHashes.has(rawCommit.hash),
-      revertsCommit: revertMatch ? revertMatch[1] : null,
-      tags: aiTag,
-      ...(session ? { session } : {}),
-      stats: rawCommit.stats,
-    };
-
-    commits.push(commit);
-  }
-
-  if (syntheticMergesDropped > 0) {
-    logger?.info(
-      `Skipped ${syntheticMergesDropped} CI-generated PR merge commit(s) (refs/pull/N/merge)`
-    );
-  }
+  const commits = buildCommits(
+    rawCommits,
+    {
+      // Message heuristics, automation, then the manifest — shared with `trail`
+      tagProvenance: createProvenanceTagger({
+        patterns: aiPatterns,
+        tools: aiTools,
+        trailerDomains: aiTrailerDomains,
+        botBlocklist: aiBotBlocklist,
+        manifestIndex,
+        logger,
+      }),
+      redactor,
+      defaultBranchHashes,
+    },
+    diffBase !== undefined,
+    logger
+  );
 
   if (manifestIndex) {
     const unmatched = unmatchedManifestHashes(manifestIndex);

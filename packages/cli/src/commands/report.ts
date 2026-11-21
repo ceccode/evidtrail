@@ -129,10 +129,10 @@ ${metrics.caveats.map((caveat) => `- ${caveat}`).join('\n')}
 ${gapSection}${details}`;
 }
 
-function generateMarkdownReport(metrics: Metrics): string {
-  if (metrics.scope === 'pr') return generatePRMarkdownReport(metrics);
+// The full report is a composition of sections, each a function of the
+// metrics alone.
 
-  const a = metrics.attribution;
+function renderProvenance(a: Metrics['attribution']): string {
   const coveragePct = (a.coverage * 100).toFixed(1);
   const unknownPct = a.commitsTotal > 0 ? ((a.unknown / a.commitsTotal) * 100).toFixed(1) : '0.0';
 
@@ -152,6 +152,33 @@ function generateMarkdownReport(metrics: Metrics): string {
       ? `\n\`defaultMode\` is \`${a.defaultMode}\`: the commit hook stamps it on new commits. It is not applied to the ${a.evidence.none} commit${a.evidence.none === 1 ? '' : 's'} above with no evidence, because a repository setting says nothing about how a past commit was produced.\n`
       : '';
 
+  return `## Provenance
+
+**${coveragePct}% of commits carry provenance evidence** — declared ${a.evidence.declared} · inferred ${a.evidence.inferred} · none ${a.evidence.none} (${unknownPct}%). *Declared* means the commit states it, in a trailer or the attribution manifest. *Inferred* means evidtrail concluded it from a co-author or a tool name. A commit with no evidence is not evidence of a human.
+${
+  a.aiModeUnknown
+    ? `\nOf the ${a.ai} AI commits, **${a.aiModeUnknown} carry a signal of AI involvement but no autonomy level**: coverage counts them, the table below counts them as \`unknown\`. Full coverage is not full knowledge of how the code was produced.\n`
+    : ''
+}${
+  a.sessions && a.sessions.linked > 0
+    ? `\n**${a.sessions.linked} of the ${a.ai} AI commits link to an agent session** (${a.sessions.distinct} distinct). Git holds what each session committed; the session holds what was tried and fixed before that. \`evidtrail trail <commit>\` follows a commit to its transcript when the transcript is on this machine. evidtrail reads nothing from the sessions.\n`
+    : ''
+}${recentLine}${coverageWarning}
+| Autonomy level | Commits |
+|---|---:|
+| agent | ${a.modes.agent} |
+| assisted | ${a.modes.assisted} |
+| autocomplete | ${a.modes.autocomplete} |
+| none (hand-written) | ${a.modes.none} |
+| unknown | ${a.modes.unknown} |
+| _automated (not authored)_ | ${a.automated} |
+
+*Three-state view:* ai ${a.ai} · human ${a.human} · automated ${a.automated} · unknown ${a.unknown} — a projection of the table above, kept for a one-word headline.
+${priorNote}
+`;
+}
+
+function renderLineSurvival(metrics: Metrics): string {
   const ls = metrics.lineSurvival;
   const lineSection = ls
     ? `### Line Survival
@@ -174,6 +201,10 @@ Approximate survival of AI-introduced lines: **${(ls.approxSurvivalRate * 100).t
 `
     : '';
 
+  return lineSection;
+}
+
+function renderOutcomes(metrics: Metrics): string {
   const oc = metrics.outcomeCorrelation;
   // A bare count is uninterpretable: in a repo that is 90% AI, 90% of
   // reverts being AI means nothing at all. Every row carries the cohort's
@@ -226,6 +257,10 @@ ${hotfixRows.join('\n')}
 `
       : '';
 
+  return outcomeSection;
+}
+
+function renderPRMerges(metrics: Metrics): string {
   const acc = metrics.prAcceptance;
   function accRow(label: string, stats: { total: number; merged: number; closed: number; acceptanceRate: number } | null) {
     if (!stats) return null;
@@ -253,29 +288,10 @@ ${[
 `
     : '';
 
-  // The repository block opens Change Signals because it is the only view
-  // there that needs no attribution evidence: valid at 0% coverage. It once
-  // replaced a "Persistence" section that rendered the AI cohort's numbers
-  // under a generic-looking heading — cohort data wearing a repo-level label.
-  const rq = metrics.repo;
-  const rqp = rq.persistence;
+  return prSection;
+}
 
-  // A bounded run observes nothing past its bound. Saying so next to the
-  // table is what keeps "too recent" from reading as "never touched again"
-  // when the reader knows the repository has moved on since.
-  const observationNote = metrics.window.until
-    ? `\nObservation ends at **${metrics.window.observationEnd ?? metrics.window.until}** (the \`--until\` bound): files first touched shortly before it are *too recent*, not untouched, and periods that end after it are immature below.\n`
-    : '';
-
-  // A windowed run measures a different population, not the same one over a
-  // shorter span: a file's clock starts at its first touch INSIDE the
-  // window, so long-lived files enter as if new. The same repository read
-  // 68% over its full history and 90% over its last 90 days — both correct,
-  // and only comparable with runs of the same window.
-  const windowNote = metrics.window.since
-    ? `\nWindow starts at **${metrics.window.since}** (\`--since\`): a file's first touch is its first touch inside the window, so files that predate it count from their first edit here, not from their creation. Rates from a windowed run compare with other runs of the same window, not with full history.\n`
-    : '';
-
+function renderTrend(metrics: Metrics): string {
   // Change signals over time. The headline is
   // the direction of travel, not the snapshot — and the direction is only
   // readable between periods that have had the same amount of time to be
@@ -319,6 +335,33 @@ Every period is measured through the same ${tr.observationDays}-day window, so n
 ${trendRows.join('\n')}
 ${immature > 0 ? `\n*(immature)* — Too recent to judge: the period has not been over for the full ${tr.observationDays}-day window, so its files have had less time to be reworked than every period above. Shown for completeness, excluded from the comparison — otherwise every report would find quality declining.\n` : ''}`
       : '';
+  return trendSection;
+}
+
+function renderRepository(metrics: Metrics): string {
+  // The repository block opens Change Signals because it is the only view
+  // there that needs no attribution evidence: valid at 0% coverage. It once
+  // replaced a "Persistence" section that rendered the AI cohort's numbers
+  // under a generic-looking heading — cohort data wearing a repo-level label.
+  const rq = metrics.repo;
+  const rqp = rq.persistence;
+
+  // A bounded run observes nothing past its bound. Saying so next to the
+  // table is what keeps "too recent" from reading as "never touched again"
+  // when the reader knows the repository has moved on since.
+  const observationNote = metrics.window.until
+    ? `\nObservation ends at **${metrics.window.observationEnd ?? metrics.window.until}** (the \`--until\` bound): files first touched shortly before it are *too recent*, not untouched, and periods that end after it are immature below.\n`
+    : '';
+
+  // A windowed run measures a different population, not the same one over a
+  // shorter span: a file's clock starts at its first touch INSIDE the
+  // window, so long-lived files enter as if new. The same repository read
+  // 68% over its full history and 90% over its last 90 days — both correct,
+  // and only comparable with runs of the same window.
+  const windowNote = metrics.window.since
+    ? `\nWindow starts at **${metrics.window.since}** (\`--since\`): a file's first touch is its first touch inside the window, so files that predate it count from their first edit here, not from their creation. Rates from a windowed run compare with other runs of the same window, not with full history.\n`
+    : '';
+
   const codeQualitySection = `### Repository
 
 How files change again, as a property of the **repo** — measured over all ${rq.commitsAuthored} authored commits (${rq.commitsAutomated} automated excluded). No attribution evidence required: these numbers do not move with coverage.
@@ -330,8 +373,14 @@ ${observationNote}
 | Horizon | Retouched | Eligible | Too recent | Rate |
 |---:|---:|---:|---:|---:|
 ${rqp.rapidRetouch.map((result) => `| ${result.windowDays}d | ${result.retouched} | ${result.eligible} | ${result.tooRecent} | ${result.rate === null ? '—' : `${(result.rate * 100).toFixed(1)}%`} |`).join('\n')}
-${trendSection}
+${renderTrend(metrics)}
 `;
+
+  return codeQualitySection;
+}
+
+function generateMarkdownReport(metrics: Metrics): string {
+  if (metrics.scope === 'pr') return generatePRMarkdownReport(metrics);
 
   // Provenance leads. It is the part of this report git can actually
   // answer: what each commit states about how it was produced. Change
@@ -347,34 +396,11 @@ ${trendSection}
 **Window:** ${metrics.window.since || 'beginning'} → ${metrics.window.until || 'now'}
 **Generated:** ${metrics.generatedAt}
 
-## Provenance
-
-**${coveragePct}% of commits carry provenance evidence** — declared ${a.evidence.declared} · inferred ${a.evidence.inferred} · none ${a.evidence.none} (${unknownPct}%). *Declared* means the commit states it, in a trailer or the attribution manifest. *Inferred* means evidtrail concluded it from a co-author or a tool name. A commit with no evidence is not evidence of a human.
-${
-  a.aiModeUnknown
-    ? `\nOf the ${a.ai} AI commits, **${a.aiModeUnknown} carry a signal of AI involvement but no autonomy level**: coverage counts them, the table below counts them as \`unknown\`. Full coverage is not full knowledge of how the code was produced.\n`
-    : ''
-}${
-  a.sessions && a.sessions.linked > 0
-    ? `\n**${a.sessions.linked} of the ${a.ai} AI commits link to an agent session** (${a.sessions.distinct} distinct). Git holds what each session committed; the session holds what was tried and fixed before that. \`evidtrail trail <commit>\` follows a commit to its transcript when the transcript is on this machine. evidtrail reads nothing from the sessions.\n`
-    : ''
-}${recentLine}${coverageWarning}
-| Autonomy level | Commits |
-|---|---:|
-| agent | ${a.modes.agent} |
-| assisted | ${a.modes.assisted} |
-| autocomplete | ${a.modes.autocomplete} |
-| none (hand-written) | ${a.modes.none} |
-| unknown | ${a.modes.unknown} |
-| _automated (not authored)_ | ${a.automated} |
-
-*Three-state view:* ai ${a.ai} · human ${a.human} · automated ${a.automated} · unknown ${a.unknown} — a projection of the table above, kept for a one-word headline.
-${priorNote}
-## Change Signals
+${renderProvenance(metrics.attribution)}## Change Signals
 
 What git records after a commit: files touched again, lines still alive, reverts, hotfixes, merged pull requests. These are churn signals, not a quality score. Mistakes an agent makes and fixes inside its session never reach git, so they leave no trace here, and a rate that moves says the work changed, not why. Read them as places to look closer.
 
-${codeQualitySection}${lineSection}${outcomeSection}${prSection}
+${renderRepository(metrics)}${renderLineSurvival(metrics)}${renderOutcomes(metrics)}${renderPRMerges(metrics)}
 ## Caveats
 ${metrics.caveats.map((caveat) => `- ${caveat}`).join('\n')}
 `;
