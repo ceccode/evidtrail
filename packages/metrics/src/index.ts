@@ -50,20 +50,19 @@ function round(value: number, decimals: number): number {
   return Math.round(value * factor) / factor;
 }
 
-export function calculateMetrics(
-  commitStream: CommitStream,
-  options: MetricsOptions = {}
-): Metrics {
-  const {
-    defaultMode,
-    coverageThreshold = 0.7,
-    coverageWindowDays = DEFAULT_COVERAGE_WINDOW_DAYS,
-    prStream = null,
-    blameStream = null,
-    hotfixWindowDays,
-    trend: trendOptions,
-  } = options;
+interface AttributionOptions {
+  defaultMode?: DeclaredMode;
+  coverageThreshold: number;
+  coverageWindowDays: number;
+}
 
+// What the commits state about how they were produced: the evidence axis
+// (coverage), the autonomy axis, the projection, and the gaps to repair.
+function calculateAttribution(
+  commitStream: CommitStream,
+  { defaultMode, coverageThreshold, coverageWindowDays }: AttributionOptions,
+  asOf: Date
+): Attribution {
   const counts = { ai: 0, human: 0, automated: 0, unknown: 0 };
   const modes = { none: 0, autocomplete: 0, assisted: 0, agent: 0, unknown: 0 };
   const evidence = { declared: 0, inferred: 0, none: 0 };
@@ -94,13 +93,8 @@ export function calculateMetrics(
 
   // Coverage over a recent window (#52): the number a team can actually move.
   // All-time coverage is a permanent verdict on history predating adoption.
-  // A metrics artifact is a pure function of its input artifact. Using wall
-  // clock time here made an unchanged commit-stream.json produce different
-  // coverage and bytes on different days. And observation
-  // cannot outlive the `--until` bound: everything below that measures
-  // elapsed time — the recent-coverage window, censoring, trend maturity —
-  // runs to this instant and no further.
-  const asOf = observationEndOf(commitStream);
+  // It is measured back from `asOf`, never from the wall clock: see
+  // calculateMetrics.
   const windowStart = new Date(asOf.getTime() - coverageWindowDays * 24 * 60 * 60 * 1000);
   const recentCommits = commitStream.commits.filter(
     (commit) => new Date(commit.committerDate) >= windowStart
@@ -116,7 +110,7 @@ export function calculateMetrics(
     (commit) => commit.tags.evidence === 'none'
   );
 
-  const attribution: Attribution = {
+  return {
     commitsTotal: total,
     ai: counts.ai,
     human: counts.human,
@@ -151,32 +145,32 @@ export function calculateMetrics(
       truncated: commitsMissingEvidence.length > MAX_EVIDENCE_GAPS,
     },
   };
+}
+
 
   // Repository change signals (#77, step 1). Computed over ALL authored
   // commits: no cohort, no evidence requirement, nothing a prior could move.
+function calculateRepoSignals(commitStream: CommitStream, asOf: Date): RepoQuality {
   const isAuthored = (commit: Commit) => !commit.tags.automated;
   const authoredCount = commitStream.commits.filter(isAuthored).length;
-  const repo: RepoQuality = {
+  return {
     commitsAuthored: authoredCount,
-    commitsAutomated: total - authoredCount,
+    commitsAutomated: commitStream.commits.length - authoredCount,
     persistence: calculatePersistence(commitStream, isAuthored, { observationEnd: asOf }),
   };
+}
 
-  // The same repo-level measurement sliced by period, so the repo can be
-  // compared with its own past (#77 step 3).
-  const trend = calculateTrend(commitStream, { observationEnd: asOf, ...trendOptions });
 
-  // PR acceptance (#51): present only when fetch-prs ran
-  const prAcceptance = prStream ? calculatePRAcceptance(prStream) : null;
-  // Line-level survival (#23): present only when blame ran
-  const lineSurvival = blameStream ? calculateLineSurvival(blameStream, commitStream) : null;
-  // Outcome correlation (#26): reverts and hotfixes linked to what they
-  // respond to. Always computed — a repo-level property, not a comparison.
-  const outcomeCorrelation = calculateOutcomeCorrelation(
-    commitStream,
-    hotfixWindowDays !== undefined ? { hotfixWindowDays } : {}
-  );
-
+// The limits a reader needs next to the numbers, for this scope and for the
+// optional inputs that were or were not supplied.
+function caveatsFor(
+  commitStream: CommitStream,
+  attribution: Attribution,
+  { prAcceptance, lineSurvival }: Pick<Metrics, 'prAcceptance' | 'lineSurvival'>
+): string[] {
+  // The unrounded figure, as stated in the caveat with one decimal
+  const { declared, inferred } = attribution.evidence;
+  const coverage = attribution.commitsTotal > 0 ? (declared + inferred) / attribution.commitsTotal : 0;
   const scopeCaveat =
     commitStream.scope === 'pr'
       ? `Commit scope is \`pr\` at ${commitStream.headSha.slice(0, 12) || 'an empty repository'}: only commits in base..HEAD are included. This is a change-set view, not repository history, merge status, or deployed production state.`
@@ -224,6 +218,52 @@ export function calculateMetrics(
       "PR merge outcomes are unavailable: run 'evidtrail fetch-prs' to compare merged and closed-unmerged work. Git history alone cannot recover discarded PRs."
     );
   }
+  return caveats;
+}
+
+export function calculateMetrics(
+  commitStream: CommitStream,
+  options: MetricsOptions = {}
+): Metrics {
+  const {
+    defaultMode,
+    coverageThreshold = 0.7,
+    coverageWindowDays = DEFAULT_COVERAGE_WINDOW_DAYS,
+    prStream = null,
+    blameStream = null,
+    hotfixWindowDays,
+    trend: trendOptions,
+  } = options;
+
+  // A metrics artifact is a pure function of its input artifact. Using wall
+  // clock time here made an unchanged commit-stream.json produce different
+  // coverage and bytes on different days. And observation cannot outlive
+  // the `--until` bound: everything that measures elapsed time — the
+  // recent-coverage window, the retouch horizons, trend maturity — runs to
+  // this instant and no further.
+  const asOf = observationEndOf(commitStream);
+  const attribution = calculateAttribution(
+    commitStream,
+    { defaultMode, coverageThreshold, coverageWindowDays },
+    asOf
+  );
+  const repo = calculateRepoSignals(commitStream, asOf);
+
+  // The same repo-level measurement sliced by period, so the repo can be
+  // compared with its own past (#77 step 3).
+  const trend = calculateTrend(commitStream, { observationEnd: asOf, ...trendOptions });
+
+  // PR acceptance (#51): present only when fetch-prs ran
+  const prAcceptance = prStream ? calculatePRAcceptance(prStream) : null;
+  // Line-level survival (#23): present only when blame ran
+  const lineSurvival = blameStream ? calculateLineSurvival(blameStream, commitStream) : null;
+  // Outcome correlation (#26): reverts and hotfixes linked to what they
+  // respond to. Always computed — a repo-level property, not a comparison.
+  const outcomeCorrelation = calculateOutcomeCorrelation(
+    commitStream,
+    hotfixWindowDays !== undefined ? { hotfixWindowDays } : {}
+  );
+
   return {
     schemaVersion: METRICS_SCHEMA_VERSION,
     generatedAt: formatISODate(asOf),
@@ -242,6 +282,6 @@ export function calculateMetrics(
     outcomeCorrelation,
     prAcceptance,
     lineSurvival,
-    caveats,
+    caveats: caveatsFor(commitStream, attribution, { prAcceptance, lineSurvival }),
   };
 }

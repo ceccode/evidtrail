@@ -45,9 +45,150 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
-  const checks: DoctorCheck[] = [];
+async function checkHistory(repoPath: string): Promise<DoctorCheck> {
+  const count = await git(repoPath, ['rev-list', '--count', '--all']);
+  return count === '0'
+    ? {
+        name: 'history',
+        status: 'warn',
+        detail: 'no commits yet — nothing to measure until the first commit',
+      }
+    : { name: 'history', status: 'ok', detail: `${count ?? '?'} commits reachable` };
+}
 
+// A shallow clone is the single most likely way for CI to produce a
+// confidently wrong report: actions/checkout defaults to fetch-depth 1.
+async function checkCloneDepth(repoPath: string): Promise<DoctorCheck> {
+  const shallow = await git(repoPath, ['rev-parse', '--is-shallow-repository']);
+  return shallow === 'true'
+    ? {
+        name: 'clone depth',
+        status: 'fail',
+        detail: 'shallow clone — history is truncated, every metric would describe a fragment',
+        fix: 'git fetch --unshallow; in CI set fetch-depth: 0 (actions/checkout) or GIT_DEPTH: 0 (GitLab).',
+      }
+    : { name: 'clone depth', status: 'ok', detail: 'full history' };
+}
+
+// A blobless/treeless partial clone has the commits but not the contents
+// `git log --numstat` and `git blame` need: it either fails outright or
+// lazily downloads everything, which defeats the point of the filter.
+async function checkCloneContents(repoPath: string): Promise<DoctorCheck> {
+  const promisor = await git(repoPath, ['config', '--get', 'remote.origin.promisor']);
+  const filter = await git(repoPath, ['config', '--get', 'remote.origin.partialclonefilter']);
+  return promisor === 'true' || filter
+    ? {
+        name: 'clone contents',
+        status: 'warn',
+        detail: `partial clone (${filter || 'promisor'}) — collect and blame need blob contents and will fetch them on demand, slowly`,
+        fix: 'Clone without --filter for evidtrail, or run git fetch --refetch once.',
+      }
+    : { name: 'clone contents', status: 'ok', detail: 'blobs present' };
+}
+
+async function checkDefaultBranch(repoPath: string): Promise<DoctorCheck> {
+  const originHead = await git(repoPath, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']);
+  const branch = originHead?.replace(/^origin\//, '') ?? null;
+  return branch
+    ? { name: 'default branch', status: 'ok', detail: branch }
+    : {
+        name: 'default branch',
+        status: 'warn',
+        detail: 'origin/HEAD is not set — evidtrail falls back to main/master or the current branch',
+        fix: 'git remote set-head origin --auto, or pass --default-branch <name> to collect.',
+      };
+}
+
+// Fail-fast on the config, exactly as analyze does: a malformed or
+// retired-key .evidtrail.json silently applying defaults is the failure this
+// project keeps designing against.
+async function checkConfig(repoPath: string): Promise<DoctorCheck> {
+  const configFile = await findConfigFile(repoPath);
+  if (!configFile) {
+    return {
+      name: CONFIG_FILENAME,
+      status: 'warn',
+      detail: 'absent — defaults apply (no defaultMode, coverage threshold 70%)',
+      fix: 'evidtrail init writes a starter config.',
+    };
+  }
+  try {
+    const config = await loadConfig(repoPath);
+    const validity = config.defaultMode
+      ? `valid — defaultMode: ${config.defaultMode} (stamped on new commits by the hook; never applied to past ones)`
+      : 'valid — no defaultMode';
+    return { name: CONFIG_FILENAME, status: 'ok', detail: validity };
+  } catch (error) {
+    return {
+      name: CONFIG_FILENAME,
+      status: 'fail',
+      detail: describeError(error).split('\n')[0],
+      fix: configFile.retired
+        ? `git mv ${configFile.name} ${CONFIG_FILENAME}`
+        : 'Fix the file; evidtrail analyze refuses to run with a broken config rather than apply defaults.',
+    };
+  }
+}
+
+// The hook is per-clone state. A repo can be fully set up while the clone in
+// front of you declares nothing, and nothing visibly breaks (#75).
+async function checkHook(repoPath: string): Promise<DoctorCheck> {
+  return (await isHookInstalled(repoPath))
+    ? { name: 'commit hook (this clone)', status: 'ok', detail: 'AI-Mode trailer will be stamped' }
+    : {
+        name: 'commit hook (this clone)',
+        status: 'warn',
+        detail: 'not installed — commits made from this clone declare no autonomy mode',
+        fix: 'evidtrail install-hooks, or evidtrail init to also wire it into package.json prepare.',
+      };
+}
+
+// Only for a repository with a package.json: elsewhere there is no prepare step.
+async function checkPrepareScript(repoPath: string): Promise<DoctorCheck | null> {
+  const pkgPath = join(repoPath, 'package.json');
+  if (!(await exists(pkgPath))) return null;
+  try {
+    const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf-8')) as {
+      scripts?: Record<string, string>;
+    };
+    const prepare = pkg.scripts?.prepare ?? '';
+    return /evidtrail\s+install-hooks|install-hooks\.mjs/.test(prepare)
+      ? { name: 'prepare script', status: 'ok', detail: 'every clone installs the hook on install' }
+      : {
+          name: 'prepare script',
+          status: 'warn',
+          detail: 'package.json has no evidtrail prepare step — each clone must install the hook by hand',
+          fix: 'evidtrail init adds "prepare": "evidtrail install-hooks --if-git".',
+        };
+  } catch {
+    return { name: 'prepare script', status: 'warn', detail: 'package.json is not valid JSON' };
+  }
+}
+
+// Only for a repository on GitHub, recognised by its .github directory.
+async function checkWorkflow(repoPath: string): Promise<DoctorCheck | null> {
+  if (!(await exists(join(repoPath, '.github')))) return null;
+  const workflowDir = join(repoPath, '.github', 'workflows');
+  let hasEvidtrail = false;
+  try {
+    for (const file of await fs.readdir(workflowDir)) {
+      const body = await fs.readFile(join(workflowDir, file), 'utf-8');
+      if (/evidtrail/i.test(body)) hasEvidtrail = true;
+    }
+  } catch {
+    // no workflows dir
+  }
+  return hasEvidtrail
+    ? { name: 'CI workflow', status: 'ok', detail: 'a workflow runs evidtrail' }
+    : {
+        name: 'CI workflow',
+        status: 'warn',
+        detail: 'no workflow runs evidtrail — PRs get no evidence comment',
+        fix: 'evidtrail init writes .github/workflows/evidtrail.yml.',
+      };
+}
+
+export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
   if (!(await isGitRepository(repoPath))) {
     return [
       {
@@ -58,152 +199,21 @@ export async function runDoctor(repoPath: string): Promise<DoctorCheck[]> {
       },
     ];
   }
-  checks.push({ name: 'git repository', status: 'ok', detail: repoPath });
-
-  const count = await git(repoPath, ['rev-list', '--count', '--all']);
-  if (count === '0') {
-    checks.push({
-      name: 'history',
-      status: 'warn',
-      detail: 'no commits yet — nothing to measure until the first commit',
-    });
-  } else {
-    checks.push({ name: 'history', status: 'ok', detail: `${count ?? '?'} commits reachable` });
+  // Sequential on purpose: the checks print in this order.
+  const checks: Array<DoctorCheck | null> = [{ name: 'git repository', status: 'ok', detail: repoPath }];
+  for (const check of [
+    checkHistory,
+    checkCloneDepth,
+    checkCloneContents,
+    checkDefaultBranch,
+    checkConfig,
+    checkHook,
+    checkPrepareScript,
+    checkWorkflow,
+  ]) {
+    checks.push(await check(repoPath));
   }
-
-  // A shallow clone is the single most likely way for CI to produce a
-  // confidently wrong report: actions/checkout defaults to fetch-depth 1.
-  const shallow = await git(repoPath, ['rev-parse', '--is-shallow-repository']);
-  checks.push(
-    shallow === 'true'
-      ? {
-          name: 'clone depth',
-          status: 'fail',
-          detail: 'shallow clone — history is truncated, every metric would describe a fragment',
-          fix: 'git fetch --unshallow; in CI set fetch-depth: 0 (actions/checkout) or GIT_DEPTH: 0 (GitLab).',
-        }
-      : { name: 'clone depth', status: 'ok', detail: 'full history' }
-  );
-
-  // A blobless/treeless partial clone has the commits but not the contents
-  // `git log --numstat` and `git blame` need: it either fails outright or
-  // lazily downloads everything, which defeats the point of the filter.
-  const promisor = await git(repoPath, ['config', '--get', 'remote.origin.promisor']);
-  const filter = await git(repoPath, ['config', '--get', 'remote.origin.partialclonefilter']);
-  checks.push(
-    promisor === 'true' || filter
-      ? {
-          name: 'clone contents',
-          status: 'warn',
-          detail: `partial clone (${filter || 'promisor'}) — collect and blame need blob contents and will fetch them on demand, slowly`,
-          fix: 'Clone without --filter for evidtrail, or run git fetch --refetch once.',
-        }
-      : { name: 'clone contents', status: 'ok', detail: 'blobs present' }
-  );
-
-  const originHead = await git(repoPath, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']);
-  const branch = originHead?.replace(/^origin\//, '') ?? null;
-  checks.push(
-    branch
-      ? { name: 'default branch', status: 'ok', detail: branch }
-      : {
-          name: 'default branch',
-          status: 'warn',
-          detail: 'origin/HEAD is not set — evidtrail falls back to main/master or the current branch',
-          fix: 'git remote set-head origin --auto, or pass --default-branch <name> to collect.',
-        }
-  );
-
-  // Fail-fast on the config, exactly as analyze does: a malformed or
-  // retired-key .evidtrail.json silently applying defaults is the failure this
-  // project keeps designing against.
-  const configFile = await findConfigFile(repoPath);
-  if (configFile) {
-    try {
-      const config = await loadConfig(repoPath);
-      const validity = config.defaultMode
-        ? `valid — defaultMode: ${config.defaultMode} (stamped on new commits by the hook; never applied to past ones)`
-        : 'valid — no defaultMode';
-      checks.push({ name: CONFIG_FILENAME, status: 'ok', detail: validity });
-    } catch (error) {
-      checks.push({
-        name: CONFIG_FILENAME,
-        status: 'fail',
-        detail: describeError(error).split('\n')[0],
-        fix: configFile.retired
-          ? `git mv ${configFile.name} ${CONFIG_FILENAME}`
-          : 'Fix the file; evidtrail analyze refuses to run with a broken config rather than apply defaults.',
-      });
-    }
-  } else {
-    checks.push({
-      name: CONFIG_FILENAME,
-      status: 'warn',
-      detail: 'absent — defaults apply (no defaultMode, coverage threshold 70%)',
-      fix: 'evidtrail init writes a starter config.',
-    });
-  }
-
-  // The hook is per-clone state. A repo can be fully set up while the clone
-  // in front of you declares nothing, and nothing visibly breaks (#75).
-  const hooked = await isHookInstalled(repoPath);
-  checks.push(
-    hooked
-      ? { name: 'commit hook (this clone)', status: 'ok', detail: 'AI-Mode trailer will be stamped' }
-      : {
-          name: 'commit hook (this clone)',
-          status: 'warn',
-          detail: 'not installed — commits made from this clone declare no autonomy mode',
-          fix: 'evidtrail install-hooks, or evidtrail init to also wire it into package.json prepare.',
-        }
-  );
-
-  const pkgPath = join(repoPath, 'package.json');
-  if (await exists(pkgPath)) {
-    try {
-      const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf-8')) as {
-        scripts?: Record<string, string>;
-      };
-      const prepare = pkg.scripts?.prepare ?? '';
-      checks.push(
-        /evidtrail\s+install-hooks|install-hooks\.mjs/.test(prepare)
-          ? { name: 'prepare script', status: 'ok', detail: 'every clone installs the hook on install' }
-          : {
-              name: 'prepare script',
-              status: 'warn',
-              detail: 'package.json has no evidtrail prepare step — each clone must install the hook by hand',
-              fix: 'evidtrail init adds "prepare": "evidtrail install-hooks --if-git".',
-            }
-      );
-    } catch {
-      checks.push({ name: 'prepare script', status: 'warn', detail: 'package.json is not valid JSON' });
-    }
-  }
-
-  const workflowDir = join(repoPath, '.github', 'workflows');
-  if (await exists(join(repoPath, '.github'))) {
-    let hasEvidtrail = false;
-    try {
-      for (const file of await fs.readdir(workflowDir)) {
-        const body = await fs.readFile(join(workflowDir, file), 'utf-8');
-        if (/evidtrail/i.test(body)) hasEvidtrail = true;
-      }
-    } catch {
-      // no workflows dir
-    }
-    checks.push(
-      hasEvidtrail
-        ? { name: 'CI workflow', status: 'ok', detail: 'a workflow runs evidtrail' }
-        : {
-            name: 'CI workflow',
-            status: 'warn',
-            detail: 'no workflow runs evidtrail — PRs get no evidence comment',
-            fix: 'evidtrail init writes .github/workflows/evidtrail.yml.',
-          }
-    );
-  }
-
-  return checks;
+  return checks.filter((check): check is DoctorCheck => check !== null);
 }
 
 const ICON: Record<CheckStatus, string> = { ok: '✓', warn: '!', fail: '✗' };

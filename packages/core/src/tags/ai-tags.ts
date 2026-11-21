@@ -198,9 +198,19 @@ function compileCustomPattern(pattern: string): RegExp {
   }
 }
 
-export function createAITagger(
-  config: AITagConfig = { patterns: [] }
-): (message: string) => AITagResult {
+interface CompiledPatterns {
+  trailerSources: string[];
+  trailerRegexes: RegExp[];
+  blockedLineRegex: RegExp | null;
+  explicitTagRegex: RegExp;
+  explicitVerbRegexes: RegExp[];
+  customRegexes: RegExp[];
+  implicitRegexes: RegExp[];
+  mentionContextRegexes: RegExp[];
+  toolNameRegex: RegExp;
+}
+
+function compilePatterns(config: AITagConfig): CompiledPatterns {
   // Merge default tools with user-provided tools
   const allTools = [...DEFAULT_TOOLS, ...(config.tools || [])];
   const toolsPattern = allTools.map(escapeRegex).join('|');
@@ -220,141 +230,177 @@ export function createAITagger(
 
   const p = buildPatterns(toolsPattern, domainsPattern);
 
-  const explicitTagRegex = new RegExp(p.explicitTag, 'im');
-  const explicitVerbRegexes = p.explicitVerbs.map((s) => new RegExp(s, 'im'));
-  const trailerRegexes = p.trailers.map((s) => new RegExp(s, 'mi'));
-  const implicitRegexes = p.implicit.map((s) => new RegExp(s, 'im'));
-  const mentionContextRegexes = p.mentionContext.map((s) => new RegExp(s, 'im'));
-  const toolNameRegex = new RegExp(p.toolName, 'im');
-  const customRegexes = config.patterns.map(compileCustomPattern);
+  return {
+    trailerSources: p.trailers,
+    trailerRegexes: p.trailers.map((s) => new RegExp(s, 'mi')),
+    blockedLineRegex,
+    explicitTagRegex: new RegExp(p.explicitTag, 'im'),
+    explicitVerbRegexes: p.explicitVerbs.map((s) => new RegExp(s, 'im')),
+    customRegexes: config.patterns.map(compileCustomPattern),
+    implicitRegexes: p.implicit.map((s) => new RegExp(s, 'im')),
+    mentionContextRegexes: p.mentionContext.map((s) => new RegExp(s, 'im')),
+    toolNameRegex: new RegExp(p.toolName, 'im'),
+  };
+}
 
-  return (message: string): AITagResult => {
-    const sources: string[] = [];
-    let level: AILevel = 'none';
+// Phase 1: how strongly the message text itself signals AI, and which
+// heuristics said so. No decision about the axes is made here.
+function heuristicSignal(
+  message: string,
+  patterns: CompiledPatterns
+): { level: AILevel; sources: string[] } {
+  const {
+    trailerSources,
+    trailerRegexes,
+    blockedLineRegex,
+    explicitTagRegex,
+    explicitVerbRegexes,
+    customRegexes,
+    implicitRegexes,
+    mentionContextRegexes,
+    toolNameRegex,
+  } = patterns;
+  const sources: string[] = [];
+  let level: AILevel = 'none';
 
-    // Strip Co-authored-by lines from blocklisted non-AI bots so they can't
-    // trigger explicit classification via the generic bot/domain trailers.
-    const trailerText = blockedLineRegex
-      ? message
-          .split('\n')
-          .filter((line) => !blockedLineRegex.test(line))
-          .join('\n')
-      : message;
+  // Strip Co-authored-by lines from blocklisted non-AI bots so they can't
+  // trigger explicit classification via the generic bot/domain trailers.
+  const trailerText = blockedLineRegex
+    ? message
+        .split('\n')
+        .filter((line) => !blockedLineRegex.test(line))
+        .join('\n')
+    : message;
 
-    // 1. Check trailers (always explicit)
-    for (let i = 0; i < trailerRegexes.length; i++) {
-      if (trailerRegexes[i].test(trailerText)) {
-        level = 'explicit';
-        sources.push(`trailer:${p.trailers[i]}`);
-      }
-    }
-
-    // 2. Check [AI] tag (explicit)
-    if (explicitTagRegex.test(message)) {
+  // 1. Check trailers (always explicit)
+  for (let i = 0; i < trailerRegexes.length; i++) {
+    if (trailerRegexes[i].test(trailerText)) {
       level = 'explicit';
-      sources.push('tag:[ai]');
+      sources.push(`trailer:${trailerSources[i]}`);
     }
+  }
 
-    // 3. Check creation verb + tool (explicit)
-    for (const regex of explicitVerbRegexes) {
+  // 2. Check [AI] tag (explicit)
+  if (explicitTagRegex.test(message)) {
+    level = 'explicit';
+    sources.push('tag:[ai]');
+  }
+
+  // 3. Check creation verb + tool (explicit)
+  for (const regex of explicitVerbRegexes) {
+    if (regex.test(message)) {
+      level = 'explicit';
+      sources.push(`explicit_verb:${regex.source}`);
+    }
+  }
+
+  // 4. Check custom patterns (treated as explicit)
+  for (const regex of customRegexes) {
+    if (regex.test(message)) {
+      level = 'explicit';
+      sources.push(`custom:${regex.source}`);
+    }
+  }
+
+  // If already explicit, skip lower-level checks
+  if (level !== 'explicit') {
+    // 5. Check implicit patterns first (higher priority than mention)
+    let isImplicit = false;
+    for (const regex of implicitRegexes) {
       if (regex.test(message)) {
-        level = 'explicit';
-        sources.push(`explicit_verb:${regex.source}`);
+        isImplicit = true;
+        sources.push(`implicit:${regex.source}`);
       }
     }
 
-    // 4. Check custom patterns (treated as explicit)
-    for (const regex of customRegexes) {
-      if (regex.test(message)) {
-        level = 'explicit';
-        sources.push(`custom:${regex.source}`);
-      }
-    }
-
-    // If already explicit, skip lower-level checks
-    if (level !== 'explicit') {
-      // 5. Check implicit patterns first (higher priority than mention)
-      let isImplicit = false;
-      for (const regex of implicitRegexes) {
+    // 6. Check mention context (only if not implicit)
+    let isMention = false;
+    if (!isImplicit) {
+      for (const regex of mentionContextRegexes) {
         if (regex.test(message)) {
-          isImplicit = true;
-          sources.push(`implicit:${regex.source}`);
+          isMention = true;
+          sources.push(`mention_context:${regex.source}`);
         }
       }
-
-      // 6. Check mention context (only if not implicit)
-      let isMention = false;
-      if (!isImplicit) {
-        for (const regex of mentionContextRegexes) {
-          if (regex.test(message)) {
-            isMention = true;
-            sources.push(`mention_context:${regex.source}`);
-          }
-        }
-      }
-
-      // 7. Check bare tool name (fallback)
-      const hasToolName = toolNameRegex.test(message);
-
-      if (isImplicit) {
-        level = 'implicit';
-      } else if (isMention) {
-        level = 'mention';
-      } else if (hasToolName) {
-        level = 'mention';
-        sources.push('tool_name_only');
-      }
     }
 
-    // The two axes are settled here, in order of evidence strength, and the
-    // three-state attribution falls out of them (#25). Nothing below decides
-    // "is this AI?" directly — that question is now a projection.
+    // 7. Check bare tool name (fallback)
+    const hasToolName = toolNameRegex.test(message);
 
-    // 1. Declared. `AI-Mode: agent` states an agent wrote this; `AI-Mode:
-    //    none` states a human did (#61). A declaration outranks everything.
-    const declared = declaredMode(message);
-    const assisted = assistedBy(message);
-    if (assisted) sources.push('trailer:Assisted-by');
-
-    // A written disclosure outranks a `none` stamp. The realistic way to get
-    // both is a repo whose `defaultMode` is `none` and a contributor who
-    // added Assisted-by by hand: the hook stamped the prior, the person
-    // stated the fact. Reading `none` there would file a disclosed AI commit
-    // as hand-written.
-    if (assisted && (!declared || declared === 'none')) {
-      return tagFromAxes({ mode: 'unknown', evidence: 'declared', automated: false }, 'explicit', [
-        ...sources,
-        ...(declared ? ['trailer:AI-Mode'] : []),
-      ]);
+    if (isImplicit) {
+      level = 'implicit';
+    } else if (isMention) {
+      level = 'mention';
+    } else if (hasToolName) {
+      level = 'mention';
+      sources.push('tool_name_only');
     }
+  }
 
-    if (declared) {
-      sources.push('trailer:AI-Mode');
-      return tagFromAxes(
-        { mode: declared, evidence: 'declared', automated: false },
-        // A declared mode is itself explicit evidence, except `none`, which
-        // asserts absence and leaves the message heuristics to speak
-        declared === 'none' ? level : 'explicit',
-        sources
-      );
-    }
+  return { level, sources };
+}
 
-    // 2. No AI signal in the message. Not a human commit — just no signal,
-    //    which is exactly what `evidence: 'none'` means.
-    const hasAISignal = level === 'explicit' || level === 'implicit';
-    if (!hasAISignal) {
-      return tagFromAxes({ mode: 'unknown', evidence: 'none', automated: false }, level, sources);
-    }
+// Phase 2: settle the two axes from the declarations and the heuristic
+// signal, in order of evidence strength.
+function resolveAxes(message: string, level: AILevel, sources: string[]): AITagResult {
+  // The two axes are settled here, in order of evidence strength, and the
+  // three-state attribution falls out of them (#25). Nothing below decides
+  // "is this AI?" directly — that question is now a projection.
 
-    // 3. AI participated. `inferMode` names the level when the message names
-    //    a tool; when it does not, the level stays 'unknown' while the
-    //    evidence remains 'inferred' — we did conclude something, just not
-    //    the autonomy level. That pairing is the reason the axes are
-    //    separate: the old model had to call this state 'no evidence'.
+  // 1. Declared. `AI-Mode: agent` states an agent wrote this; `AI-Mode:
+  //    none` states a human did (#61). A declaration outranks everything.
+  const declared = declaredMode(message);
+  const assisted = assistedBy(message);
+  if (assisted) sources.push('trailer:Assisted-by');
+
+  // A written disclosure outranks a `none` stamp. The realistic way to get
+  // both is a repo whose `defaultMode` is `none` and a contributor who
+  // added Assisted-by by hand: the hook stamped the prior, the person
+  // stated the fact. Reading `none` there would file a disclosed AI commit
+  // as hand-written.
+  if (assisted && (!declared || declared === 'none')) {
+    return tagFromAxes({ mode: 'unknown', evidence: 'declared', automated: false }, 'explicit', [
+      ...sources,
+      ...(declared ? ['trailer:AI-Mode'] : []),
+    ]);
+  }
+
+  if (declared) {
+    sources.push('trailer:AI-Mode');
     return tagFromAxes(
-      { mode: inferMode(message), evidence: 'inferred', automated: false },
-      level,
+      { mode: declared, evidence: 'declared', automated: false },
+      // A declared mode is itself explicit evidence, except `none`, which
+      // asserts absence and leaves the message heuristics to speak
+      declared === 'none' ? level : 'explicit',
       sources
     );
+  }
+
+  // 2. No AI signal in the message. Not a human commit — just no signal,
+  //    which is exactly what `evidence: 'none'` means.
+  const hasAISignal = level === 'explicit' || level === 'implicit';
+  if (!hasAISignal) {
+    return tagFromAxes({ mode: 'unknown', evidence: 'none', automated: false }, level, sources);
+  }
+
+  // 3. AI participated. `inferMode` names the level when the message names
+  //    a tool; when it does not, the level stays 'unknown' while the
+  //    evidence remains 'inferred' — we did conclude something, just not
+  //    the autonomy level. That pairing is the reason the axes are
+  //    separate: the old model had to call this state 'no evidence'.
+  return tagFromAxes(
+    { mode: inferMode(message), evidence: 'inferred', automated: false },
+    level,
+    sources
+  );
+}
+
+export function createAITagger(
+  config: AITagConfig = { patterns: [] }
+): (message: string) => AITagResult {
+  const patterns = compilePatterns(config);
+  return (message: string): AITagResult => {
+    const { level, sources } = heuristicSignal(message, patterns);
+    return resolveAxes(message, level, sources);
   };
 }
