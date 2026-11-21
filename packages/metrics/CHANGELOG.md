@@ -1,5 +1,40 @@
 # @aida/metrics
 
+## 2.1.0
+
+### Minor Changes
+
+- 90cb53c: Names say what is computed: `calculateRapidRetouch`, `RetouchSummary`, `RepoChangeSignals`
+
+  Since 2.0 the function called `calculatePersistence` computes only fixed-horizon rapid retouch, its result type `Persistence` holds only retouch counts, and `RepoQuality` describes change signals, not quality. A reader of the code took the old meaning from the names, which is the same mistake the report was rewritten to prevent.
+
+  `@evidtrail/metrics` exports the new names: `calculateRapidRetouch`, `RapidRetouchOptions`, `DEFAULT_RETOUCH_EXCLUDED_CATEGORIES`, `RetouchSummary`, `RepoChangeSignals`. The old names stay as deprecated aliases of the same values until the next major. The JSON fields `repo.persistence` and `trend.periods[].persistence` keep their names, because renaming a field is a schema change. Comments that still spoke of quality, survival or rework in the trend and schema now describe what the code measures.
+
+  No behaviour change: 51 dogfood outputs are byte-identical to 2.0.0.
+
+### Patch Changes
+
+- 9cf1fc5: The six longest functions are compositions of named steps
+
+  `generateMarkdownReport` (250 lines), `collectCommits` (233), `calculateMetrics` (195), `createAITagger` (160) and `runDoctor` (160) each did several things in sequence, with comments acting as headings for the blocks. Every such comment marked a function waiting to be extracted. Now:
+  - the report is one render function per section, composed by `generateMarkdownReport`;
+  - `collectCommits` reads as empty-repo guard, shallow warning, range, membership, then `buildCommits`/`toCommit`; the date bounds are built once instead of twice;
+  - `calculateMetrics` composes `calculateAttribution`, `calculateRepoSignals` and `caveatsFor`;
+  - `createAITagger` is split into phases: compile the patterns, read the heuristic signal, settle the two axes;
+  - `runDoctor` runs one function per check.
+
+  No behaviour change. Dogfooded against 2.0.0 on frozen copies of three repositories plus a synthetic metrics file that reaches every report branch (PR outcomes, `--since`/`--until` notes, capped blame, outcome ratios, an unapplied `defaultMode`): all 51 outputs, including the verbose per-commit collect logs, are byte-identical.
+
+- 096df18: One reader for versioned artifacts, one list of autonomy modes
+
+  The same four steps, read the JSON, check `schemaVersion`, parse the schema, name the command to rerun, were written out five times across `analyze`, `report` and `verify`. The four declarable modes were spelled out by hand in five schemas, and the commit tags were defined twice, once for commits and once for pull request commits. A change to either had to be made in every copy, and a missed copy would have let two readers disagree about the same file.
+
+  `@evidtrail/core` now exports `readVersionedJSON`, `DECLARABLE_MODES`, the `DeclaredMode` and `AIMode` schemas, and `CommitTags`. The CLI reads its artifacts through one function per file. No behaviour changes: dogfooded against 2.0.0 on frozen copies of three repositories, all 43 outputs (reports, metrics, streams, `verify`, `trail`, `doctor`, the PR comment and the version-gate errors) are byte-identical.
+
+- Updated dependencies [9cf1fc5]
+- Updated dependencies [096df18]
+  - @evidtrail/core@2.1.0
+
 ## 2.0.0
 
 ### Major Changes
