@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { AIMode, AITagResult, tagFromAxes } from './ai-tags.js';
+import { AITagResult, tagFromAxes } from './ai-tags.js';
+import type { AIMode } from '../schema/tags.js';
 import { Logger } from '../utils/log.js';
 
 export const MANIFEST_FILENAME = 'evidtrail-attribution.json';

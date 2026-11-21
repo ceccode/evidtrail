@@ -1,13 +1,6 @@
 import { Command } from 'commander';
-import {
-  readJSON,
-  createLogger,
-  COMMIT_STREAM_SCHEMA_VERSION,
-  assertSchemaVersion,
-  describeError,
-  CommitStream,
-} from '@evidtrail/core';
-import { join } from 'path';
+import { createLogger, describeError, type CommitStream } from '@evidtrail/core';
+import { readCommitStream } from '../artifacts.js';
 
 // `evidtrail verify` — the provenance check a CI job can fail on, in the
 // spirit of the DCO check for Signed-off-by. It reads the stream `collect`
@@ -114,14 +107,7 @@ export function createVerifyCommand(): Command {
         if (require !== 'declared' && require !== 'evidence') {
           throw new Error(`Invalid --require "${require}": expected declared or evidence`);
         }
-        const raw = await readJSON<unknown>(join(options.outDir, 'commit-stream.json'));
-        assertSchemaVersion(
-          raw,
-          COMMIT_STREAM_SCHEMA_VERSION,
-          'commit-stream.json',
-          "Rerun 'evidtrail collect' with this version of evidtrail."
-        );
-        const stream = CommitStream.parse(raw);
+        const stream = await readCommitStream(options.outDir);
         const result = verifyStream(stream, require);
         console.log(formatVerifyResult(result, require, stream.scope));
         failed = result.failures.length > 0;

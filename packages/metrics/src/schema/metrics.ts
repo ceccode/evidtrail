@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DeclaredMode } from '@evidtrail/core';
 
 // Attribution coverage (#34): the headline metric. Every other number in this
 // file is only as trustworthy as this block says it is.
@@ -38,7 +39,7 @@ export const Attribution = z.object({
   // The repository's configured `defaultMode`, recorded for context; null
   // when none is set. The hook stamps it on new commits; analysis never
   // applies it to old ones, so it moves no number in this file.
-  defaultMode: z.enum(['none', 'autocomplete', 'assisted', 'agent']).nullable(),
+  defaultMode: DeclaredMode.nullable(),
   coverageThreshold: z.number().min(0).max(1),
   belowThreshold: z.boolean(), // all-time; see `recent` for the actionable one
   // Null when the window contains no commits (#52)

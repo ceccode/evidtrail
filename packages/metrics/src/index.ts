@@ -2,6 +2,7 @@ import {
   BlameStream,
   Commit,
   CommitStream,
+  DeclaredMode,
   METRICS_SCHEMA_VERSION,
   PRStream,
   formatISODate,
@@ -30,7 +31,7 @@ export interface MetricsOptions {
   // The repository's configured prior, recorded in `attribution.defaultMode`
   // for context. It is never applied to a commit: the hook stamps it on new
   // commits, and analysis leaves commits with no evidence `unknown`.
-  defaultMode?: 'none' | 'autocomplete' | 'assisted' | 'agent';
+  defaultMode?: DeclaredMode;
   coverageThreshold?: number;
   // Window for the actionable coverage figure (#52)
   coverageWindowDays?: number;

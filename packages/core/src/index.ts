@@ -1,4 +1,5 @@
 export * from './schema/evidtrail-config.js';
+export * from './schema/tags.js';
 export * from './schema/commit.js';
 export * from './schema/blame.js';
 export * from './schema/pr.js';
