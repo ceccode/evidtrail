@@ -99,6 +99,39 @@ describe('GitHubProvider.postComment', () => {
     expect(calls[1].url).toBe('https://api.github.com/repos/acme/widget/issues/comments/7');
   });
 
+  // The report comment is posted once and edited afterwards, so on a busy
+  // pull request it sits past the first 100 comments. Reading only page one
+  // would post a second report, and later runs would update one copy while
+  // the other goes stale.
+  it('finds its comment past the first page of 100', async () => {
+    onPullRequest();
+    const fullPage = Array.from({ length: 100 }, (_, i) => ({ id: i + 1, body: 'review comment' }));
+    const calls = mockFetch([
+      () => json(fullPage),
+      () => json([{ id: 150, body: '<!-- evidtrail-report -->\nold report' }]),
+      () => json({ id: 150 }),
+    ]);
+
+    await new GitHubProvider().postComment('new report');
+
+    expect(calls[0].url).toContain('per_page=100&page=1');
+    expect(calls[1].url).toContain('per_page=100&page=2');
+    expect(calls).toHaveLength(3);
+    expect(calls[2].init?.method).toBe('PATCH');
+    expect(calls[2].url).toBe('https://api.github.com/repos/acme/widget/issues/comments/150');
+  });
+
+  // A short page is the last one: no request for a page that cannot exist.
+  it('stops at the first page shorter than 100', async () => {
+    onPullRequest();
+    const calls = mockFetch([() => json([{ id: 1, body: 'review comment' }]), () => json({ id: 2 }, 201)]);
+
+    await new GitHubProvider().postComment('report');
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1].init?.method).toBe('POST');
+  });
+
   // CI logs are often public. An API error body can echo the request, and
   // the token must not reach the log through the error message.
   it('reports an API error with tokens redacted', async () => {

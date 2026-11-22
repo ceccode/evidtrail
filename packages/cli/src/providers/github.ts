@@ -1,5 +1,6 @@
 import type { CIProvider, PRIdentifier } from './types.js';
 import { readFileSync } from 'fs';
+import { COMMENT_PAGE_SIZE, findMarkedComment } from './marked-comment.js';
 
 const MARKER = '<!-- evidtrail-report -->';
 
@@ -84,23 +85,18 @@ export class GitHubProvider implements CIProvider {
     }
   }
 
-  private async findExistingComment(pr: PRIdentifier, marker: string): Promise<number | null> {
-    const url = `${this.apiUrl}/repos/${pr.repo}/issues/${pr.prNumber}/comments?per_page=100`;
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        Accept: 'application/vnd.github.v3+json',
-      },
-    });
-
-    if (!response.ok) return null;
-
-    const comments = (await response.json()) as Array<{ id: number; body: string }>;
-    const existing = comments.find(
-      (c) => c.body.startsWith(marker)
-    );
-    return existing?.id || null;
+  private findExistingComment(pr: PRIdentifier, marker: string): Promise<number | null> {
+    const url = `${this.apiUrl}/repos/${pr.repo}/issues/${pr.prNumber}/comments?per_page=${COMMENT_PAGE_SIZE}`;
+    return findMarkedComment(async (page) => {
+      const response = await fetch(`${url}&page=${page}`, {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      });
+      if (!response.ok) return null;
+      return (await response.json()) as Array<{ id: number; body: string }>;
+    }, marker);
   }
 
   private async createComment(pr: PRIdentifier, body: string): Promise<void> {

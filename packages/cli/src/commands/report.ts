@@ -328,12 +328,12 @@ function renderTrend(metrics: Metrics): string {
 
 ${trendHeadline}
 
-Every period is measured through the same ${tr.observationDays}-day window, so no period gets credit for time the others have not had.
+Every mature period is measured through the same ${tr.observationDays}-day window, so none gets credit for time the others have not had.
 
 | Period | Commits | Retouched ≤${tr.observationDays}d | Coverage |
 |---|---:|---:|---:|
 ${trendRows.join('\n')}
-${immature > 0 ? `\n*(immature)* — Too recent to judge: the period has not been over for the full ${tr.observationDays}-day window, so its files have had less time to be reworked than every period above. Shown for completeness, excluded from the comparison — otherwise every report would find quality declining.\n` : ''}`
+${immature > 0 ? `\n*(immature)* — Too recent to judge: the period has not been over for the full ${tr.observationDays}-day window, so its files have had less time to be touched again than every period above. Shown for completeness, excluded from the comparison — otherwise every report would find retouch rising.\n` : ''}`
       : '';
   return trendSection;
 }
