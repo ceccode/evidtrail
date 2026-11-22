@@ -119,6 +119,25 @@ describe('GitLabProvider.postComment', () => {
     expect(calls[1].url).toContain('/notes/99');
   });
 
+  // GitLab lists notes newest first, so on a long merge request the note
+  // posted by the first run is the one furthest back. Page one alone would
+  // miss it and post a second report.
+  it('finds its note past the first page of 100', async () => {
+    process.env.GITLAB_TOKEN = 'glpat-secret';
+    const fullPage = Array.from({ length: 100 }, (_, i) => ({ id: i + 1, body: 'review note' }));
+    const calls = mockFetch([
+      () => json(fullPage),
+      () => json([{ id: 150, body: '<!-- evidtrail-report -->\nold report' }]),
+      () => json({ id: 150 }),
+    ]);
+
+    await new GitLabProvider().postComment('# evidtrail Report');
+
+    expect(calls[1].url).toContain('per_page=100&page=2');
+    expect(calls[2].init?.method).toBe('PUT');
+    expect(calls[2].url).toContain('/notes/150');
+  });
+
   it('authenticates with PRIVATE-TOKEN', async () => {
     process.env.GITLAB_TOKEN = 'glpat-secret';
     const calls = mockFetch([() => json([]), () => json({ id: 1 }, 201)]);

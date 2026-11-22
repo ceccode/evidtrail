@@ -134,7 +134,7 @@ async function checkConfig(repoPath: string): Promise<DoctorCheck> {
 // front of you declares nothing, and nothing visibly breaks (#75).
 async function checkHook(repoPath: string): Promise<DoctorCheck> {
   return (await isHookInstalled(repoPath))
-    ? { name: 'commit hook (this clone)', status: 'ok', detail: 'AI-Mode trailer will be stamped' }
+    ? { name: 'commit hook (this clone)', status: 'ok', detail: 'stamps AI-Mode, and Assisted-by when AI took part and the tool is known' }
     : {
         name: 'commit hook (this clone)',
         status: 'warn',

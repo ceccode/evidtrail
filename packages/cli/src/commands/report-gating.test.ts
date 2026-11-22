@@ -216,3 +216,22 @@ describe('session links in the report', () => {
     expect(report).not.toContain('agent session');
   });
 });
+
+describe('trend wording', () => {
+  // The trend table shows immature rows under a sentence about equal
+  // observation. Saying "every period" there contradicts the row below it,
+  // and retouch is a change signal, not a quality measure: the text must
+  // describe what was computed, for the rows it describes.
+  it('scopes equal observation to mature periods and names retouch, not quality', async () => {
+    writeFileSync(join(repoPath, 'a.ts'), 'export const a = 1;\n');
+    git('git add -A && git commit -q -m "feat: one"');
+
+    const { report } = await pipeline();
+
+    expect(report).toContain('*(immature)*');
+    expect(report).toContain('Every mature period is measured through the same 30-day window');
+    expect(report).toContain('otherwise every report would find retouch rising');
+    expect(report).not.toContain('find quality declining');
+    expect(report).not.toContain('reworked');
+  });
+});

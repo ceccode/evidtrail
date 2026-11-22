@@ -1,4 +1,5 @@
 import type { CIProvider, PRIdentifier } from './types.js';
+import { COMMENT_PAGE_SIZE, findMarkedComment } from './marked-comment.js';
 
 // GitLab CI provider for `evidtrail comment` (#16).
 //
@@ -90,18 +91,15 @@ export class GitLabProvider implements CIProvider {
     return `${this.apiUrl}/projects/${encodeURIComponent(this.projectId)}/merge_requests/${iid}/notes`;
   }
 
-  private async findExistingNote(iid: string, marker: string): Promise<number | null> {
-    const response = await fetch(`${this.notesUrl(iid)}?per_page=100`, {
-      headers: this.headers,
-    });
-
-    if (!response.ok) return null;
-
-    const notes = (await response.json()) as Array<{ id: number; body: string }>;
-    return (
-      notes.find((note) => note.body.startsWith(marker))
-        ?.id ?? null
-    );
+  private findExistingNote(iid: string, marker: string): Promise<number | null> {
+    return findMarkedComment(async (page) => {
+      const response = await fetch(
+        `${this.notesUrl(iid)}?per_page=${COMMENT_PAGE_SIZE}&page=${page}`,
+        { headers: this.headers }
+      );
+      if (!response.ok) return null;
+      return (await response.json()) as Array<{ id: number; body: string }>;
+    }, marker);
   }
 
   private async createNote(iid: string, body: string): Promise<void> {
